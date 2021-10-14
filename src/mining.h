@@ -15,7 +15,7 @@ void start_worker_mining(mining_worker_t *worker)
     TRY( cudaEventCreate(&stopEvent) );
 
     TRY( cudaEventRecord(startEvent, worker->stream) );
-    blake3_hasher_mine<<<32, 32, 32 * sizeof(blake3_hasher), worker->stream>>>(worker->device_hasher);
+    blake3_hasher_mine<<<140, 32, 32 * sizeof(blake3_hasher), worker->stream>>>(worker->device_hasher);
     TRY( cudaEventRecord(stopEvent, worker->stream) );
 
     TRY( cudaMemcpyAsync(worker->hasher, worker->device_hasher, sizeof(blake3_hasher), cudaMemcpyDeviceToHost, worker->stream) );
@@ -23,13 +23,13 @@ void start_worker_mining(mining_worker_t *worker)
 
     float time;
     TRY( cudaEventElapsedTime(&time, startEvent, stopEvent) );
-    // printf(" === mining time: %f\n", time);
+    printf(" === mining time: %f\n", time);
 
     if (worker->hasher->found_good_hash) {
         store_worker_found_good_hash(worker, true);
     }
     clock_t end = clock();
-    // printf("=== mining time: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+    printf("=== mining time: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
 }
 
 #endif // ALEPHIUM_MINING_H

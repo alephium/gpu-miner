@@ -289,15 +289,18 @@ __global__ void blake3_hasher_mine(blake3_hasher *global_hasher)
     s_hashers[t] = *global_hasher;
     blake3_hasher *hasher = &s_hashers[t];
 
+    hasher->hash_count = 0;
+
     int stride = blockDim.x * gridDim.x;
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
-    update_nonce(hasher, tid);
+    uint64_t *short_nonce = (uint64_t *)hasher->buf;
+    *short_nonce = (*short_nonce) / stride * stride + tid;
 
     while (hasher->hash_count < mining_steps)
     {
         hasher->hash_count += 1;
 
-        update_nonce(hasher, stride);
+        *short_nonce += stride;
         blake3_hasher_double_hash(hasher);
 
         if (check_hash(hasher->hash, hasher->target, hasher->target_len, hasher->from_group, hasher->to_group))

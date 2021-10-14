@@ -45,7 +45,7 @@ void free_template(mining_template_t *template_ptr)
 }
 
 std::atomic<mining_template_t*> mining_templates[chain_nums] = {};
-std::atomic<uint64_t> mining_counts[chain_nums];
+std::atomic<uint64_t> mining_counts[chain_nums] = {};
 uint64_t task_counts[chain_nums] = { 0 };
 bool mining_templates_initialized = false;
 
