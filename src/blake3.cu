@@ -23,7 +23,7 @@
         }                                                                                                                  \
     }
 
-#define INLINE __inline__
+#define INLINE __forceinline__
 
 #define BLAKE3_KEY_LEN 32
 #define BLAKE3_OUT_LEN 32
@@ -319,7 +319,7 @@ int main()
     blob_t blob;
     hex_to_bytes("012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789", &blob);
     blob_t target;
-    hex_to_bytes("00004fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
+    hex_to_bytes("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
 
     print_hex("target string: ", target.blob, target.len);
 
@@ -337,8 +337,12 @@ int main()
     TRY(cudaStreamCreate(&stream));
     TRY(cudaStreamAttachMemAsync(stream, hasher));
 
-    blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(hasher);
+    int grid_size;
+    int block_size;
+    cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
+    // blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(hasher);
     TRY(cudaStreamSynchronize(stream));
+    printf("grid size: %d, block size: %d\n", grid_size, block_size);
 
     char *hash_string = bytes_to_hex(hasher->hash, 32);
     printf("good: %d\n", hasher->found_good_hash);
@@ -347,7 +351,7 @@ int main()
     memcpy(hasher->buf, blob.blob, blob.len);
     hasher->buf_len = blob.len;
     hasher->buf[0] = 0;
-    blake3_hasher_mine<<<1, 1, 1 * sizeof(blake3_hasher), stream>>>(hasher);
+    blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(hasher);
     TRY(cudaStreamSynchronize(stream));
     char *hash_string1 = bytes_to_hex(hasher->hash, 32);
     printf("good: %d\n", hasher->found_good_hash);
