@@ -197,10 +197,11 @@ INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
 
 typedef struct
 {
+    uint8_t buf[385];
+    size_t buf_len;
+
     blake3_chunk_state chunk;
 
-    uint8_t buf[400];
-    size_t buf_len;
     uint8_t hash[64]; // 64 bytes needed as hash will used as block words as well
 
     uint8_t target[32];

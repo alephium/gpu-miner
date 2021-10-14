@@ -15,14 +15,12 @@
 
 typedef struct mining_worker_t {
     uint32_t id;
+
     cudaStream_t stream;
     blake3_hasher *hasher;
     blake3_hasher *device_hasher;
-    // uint8_t hash[32];
-    // uint32_t hash_count;
-    // uint8_t nonce[24];
-    std::atomic<bool> found_good_hash;
 
+    std::atomic<bool> found_good_hash;
     std::atomic<mining_template_t *> template_ptr;
 } mining_worker_t;
 
@@ -30,9 +28,8 @@ void mining_worker_init(mining_worker_t *self, uint32_t id)
 {
     self->id = id;
     TRY( cudaStreamCreate(&(self->stream)) );
-    // TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
-    TRY( cudaMallocManaged(&(self->hasher), sizeof(blake3_hasher)) );
-    TRY( cudaStreamAttachMemAsync(self->stream, self->hasher) );
+    TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
+    TRY( cudaMalloc(&(self->device_hasher), sizeof(blake3_hasher)) );
     bzero(self->hasher->hash, 64);
 }
 
