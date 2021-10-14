@@ -319,12 +319,14 @@ int main()
     blob_t blob;
     hex_to_bytes("012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789", &blob);
     blob_t target;
-    hex_to_bytes("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
+    hex_to_bytes("0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
 
     print_hex("target string: ", target.blob, target.len);
 
     blake3_hasher *hasher;
-    TRY(cudaMallocManaged(&hasher, sizeof(blake3_hasher)));
+    blake3_hasher *device_hasher;
+    TRY(cudaMallocHost(&hasher, sizeof(blake3_hasher)));
+    TRY(cudaMalloc(&device_hasher, sizeof(blake3_hasher)));
 
     memcpy(hasher->buf, blob.blob, blob.len);
     hasher->buf_len = blob.len;
@@ -335,15 +337,16 @@ int main()
 
     cudaStream_t stream;
     TRY(cudaStreamCreate(&stream));
-    TRY(cudaStreamAttachMemAsync(stream, hasher));
+    TRY(cudaMemcpyAsync(device_hasher, hasher, sizeof(blake3_hasher), cudaMemcpyHostToDevice, stream));
 
-    int grid_size;
-    int block_size;
-    cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
-    // blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(hasher);
+    // int grid_size;
+    // int block_size;
+    // cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
+    blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(device_hasher);
     TRY(cudaStreamSynchronize(stream));
-    printf("grid size: %d, block size: %d\n", grid_size, block_size);
+    // printf("grid size: %d, block size: %d\n", grid_size, block_size);
 
+    TRY(cudaMemcpy(hasher, device_hasher, sizeof(blake3_hasher), cudaMemcpyDeviceToHost));
     char *hash_string = bytes_to_hex(hasher->hash, 32);
     printf("good: %d\n", hasher->found_good_hash);
     printf("%s\n", hash_string); // 0004ac0418f950947358305af95cd1a81d6277794eb4fb165be18d11895c1170
@@ -351,8 +354,12 @@ int main()
     memcpy(hasher->buf, blob.blob, blob.len);
     hasher->buf_len = blob.len;
     hasher->buf[0] = 0;
-    blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(hasher);
+    TRY(cudaMemcpyAsync(device_hasher, hasher, sizeof(blake3_hasher), cudaMemcpyHostToDevice, stream));
+
+    blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(device_hasher);
     TRY(cudaStreamSynchronize(stream));
+
+    TRY(cudaMemcpy(hasher, device_hasher, sizeof(blake3_hasher), cudaMemcpyDeviceToHost));
     char *hash_string1 = bytes_to_hex(hasher->hash, 32);
     printf("good: %d\n", hasher->found_good_hash);
     printf("%s\n", hash_string1); // 0004ac0418f950947358305af95cd1a81d6277794eb4fb165be18d11895c1170
