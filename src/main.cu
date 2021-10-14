@@ -49,11 +49,18 @@ void submit_new_block(mining_worker_t *worker)
 
 void mine(uv_work_t *req)
 {
+    int32_t to_mine_index = next_chain_to_mine();
+    if (to_mine_index == -1) {
+        printf("No task available, quitting...\n");
+        exit(1);
+    }
+
     mining_worker_t *worker = load_req_worker(req);
+    mining_counts[to_mine_index] += mining_steps;
+    setup_template(worker, load_template(to_mine_index));
+
     start_worker_mining(worker);
 }
-
-void continue_mine(mining_worker_t *worker);
 
 void after_mine(uv_work_t *req, int status)
 {
@@ -71,7 +78,7 @@ void after_mine(uv_work_t *req, int status)
     mining_counts[chain_index] += worker->hasher->hash_count;
 
     free_template(template_ptr);
-    continue_mine(worker);
+    uv_queue_work(loop, req, mine, after_mine);
 }
 
 void mine_on_chain(mining_worker_t *worker, uint32_t to_mine_index)
@@ -81,18 +88,6 @@ void mine_on_chain(mining_worker_t *worker, uint32_t to_mine_index)
     setup_template(worker, load_template(to_mine_index));
     store_req_data(worker_id, worker);
     uv_queue_work(loop, &req[worker_id], mine, after_mine);
-}
-
-void continue_mine(mining_worker_t *worker)
-{
-    int32_t to_mine_index = next_chain_to_mine();
-
-    if (to_mine_index != -1) {
-        mine_on_chain(worker, to_mine_index);
-    } else {
-        printf("No task available, quitting...\n");
-        exit(1);
-    }
 }
 
 void start_mining()
