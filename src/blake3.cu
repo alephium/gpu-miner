@@ -246,11 +246,7 @@ INLINE __device__ void compress_pre(uint32_t state[16], const uint32_t cv[8],
                                     const uint8_t block[BLAKE3_BLOCK_LEN],
                                     uint8_t block_len, uint8_t flags)
 {
-    uint32_t block_words[16];
-    // for (int i = 0; i < 16; i++) {
-    //     block_words[i] = block[i];
-    // }
-    memcpy(block_words, block, 16 * 4);
+    uint32_t *block_words = (uint32_t *)block;
 
     state[0] = cv[0];
     state[1] = cv[1];
@@ -454,12 +450,12 @@ int main()
     TRY(cudaStreamCreate(&stream));
     TRY(cudaMemcpyAsync(device_hasher, hasher, sizeof(blake3_hasher), cudaMemcpyHostToDevice, stream));
 
-    // int grid_size;
-    // int block_size;
-    // cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
-    blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(device_hasher);
-    TRY(cudaStreamSynchronize(stream));
-    // printf("grid size: %d, block size: %d\n", grid_size, block_size);
+    int grid_size;
+    int block_size;
+    cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
+    // blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(device_hasher);
+    // TRY(cudaStreamSynchronize(stream));
+    printf("grid size: %d, block size: %d\n", grid_size, block_size);
 
     TRY(cudaMemcpy(hasher, device_hasher, sizeof(blake3_hasher), cudaMemcpyDeviceToHost));
     char *hash_string = bytes_to_hex(hasher->hash, 32);
