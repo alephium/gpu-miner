@@ -88,16 +88,18 @@ INLINE __device__ uint32_t rotr32(uint32_t w, uint32_t c)
     return (w >> c) | (w << (32 - c));
 }
 
-#define G(a, b, c, d, x, y) do { \
-   state[a] = state[a] + state[b] + x;           \
-   state[d] = rotr32(state[d] ^ state[a], 16);   \
-   state[c] = state[c] + state[d];               \
-   state[b] = rotr32(state[b] ^ state[c], 12);   \
-   state[a] = state[a] + state[b] + y;           \
-   state[d] = rotr32(state[d] ^ state[a], 8);    \
-   state[c] = state[c] + state[d];               \
-   state[b] = rotr32(state[b] ^ state[c], 7);    \
-} while (0) 
+#define G(a, b, c, d, x, y)                         \
+    do                                              \
+    {                                               \
+        state[a] = state[a] + state[b] + x;         \
+        state[d] = rotr32(state[d] ^ state[a], 16); \
+        state[c] = state[c] + state[d];             \
+        state[b] = rotr32(state[b] ^ state[c], 12); \
+        state[a] = state[a] + state[b] + y;         \
+        state[d] = rotr32(state[d] ^ state[a], 8);  \
+        state[c] = state[c] + state[d];             \
+        state[b] = rotr32(state[b] ^ state[c], 7);  \
+    } while (0)
 
 #define Z00 0
 #define Z01 1
@@ -212,9 +214,11 @@ INLINE __device__ uint32_t rotr32(uint32_t w, uint32_t c)
 #define Z6E 7
 #define Z6F 13
 
-#define Mx(r, i)    (block_words[Z ## r ## i])
+#define Mx(r, i) (block_words[Z##r##i])
 
-#define ROUND_S(r)   do { \
+#define ROUND_S(r)                                 \
+    do                                             \
+    {                                              \
         G(0x0, 0x4, 0x8, 0xC, Mx(r, 0), Mx(r, 1)); \
         G(0x1, 0x5, 0x9, 0xD, Mx(r, 2), Mx(r, 3)); \
         G(0x2, 0x6, 0xA, 0xE, Mx(r, 4), Mx(r, 5)); \
@@ -435,7 +439,8 @@ int main()
 
     int grid_size;
     int block_size;
-    cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
+    cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n)
+                                                   { return n * sizeof(blake3_hasher); });
     // blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(device_hasher);
     // TRY(cudaStreamSynchronize(stream));
     printf("grid size: %d, block size: %d\n", grid_size, block_size);
