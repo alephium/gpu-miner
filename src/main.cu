@@ -231,7 +231,10 @@ int hostname_to_ip(char *ip_address, char *hostname)
 
 int main(int argc, char **argv)
 {
-    mining_workers_init();
+    int grid_size;
+    int block_size;
+    cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
+    mining_workers_init(grid_size, block_size);
 
     char broker_ip[16];
     memset(broker_ip, '\0', sizeof(broker_ip));

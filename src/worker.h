@@ -17,6 +17,9 @@ typedef struct mining_worker_t {
     uint32_t id;
 
     cudaStream_t stream;
+    int grid_size;
+    int block_size;
+
     blake3_hasher *hasher;
     blake3_hasher *device_hasher;
 
@@ -24,10 +27,13 @@ typedef struct mining_worker_t {
     std::atomic<mining_template_t *> template_ptr;
 } mining_worker_t;
 
-void mining_worker_init(mining_worker_t *self, uint32_t id)
+void mining_worker_init(mining_worker_t *self, uint32_t id, int grid_size, int block_size)
 {
     self->id = id;
     TRY( cudaStreamCreate(&(self->stream)) );
+    self->grid_size = grid_size;
+    self->block_size = block_size;
+
     TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
     TRY( cudaMalloc(&(self->device_hasher), sizeof(blake3_hasher)) );
     bzero(self->hasher->hash, 64);
@@ -96,11 +102,11 @@ void store_req_data(ssize_t worker_id, mining_worker_t *worker)
     atomic_store(&(mining_req->worker), worker);
 }
 
-void mining_workers_init()
+void mining_workers_init(int grid_size, int block_size)
 {
     for (size_t i = 0; i < parallel_mining_works; i++) {
         mining_worker_t *worker = mining_workers + i;
-        mining_worker_init(worker, (uint32_t)i);
+        mining_worker_init(worker, (uint32_t)i, grid_size, block_size);
         store_req_data(i, worker);
     }
 }
