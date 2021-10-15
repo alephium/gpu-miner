@@ -30,9 +30,14 @@
 #define BLAKE3_BLOCK_LEN 64
 #define BLAKE3_CHUNK_LEN 1024
 
-__constant__ uint32_t IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL,
-                               0xA54FF53AUL, 0x510E527FUL, 0x9B05688CUL,
-                               0x1F83D9ABUL, 0x5BE0CD19UL};
+#define IV_0 0x6A09E667UL
+#define IV_1 0xBB67AE85UL
+#define IV_2 0x3C6EF372UL
+#define IV_3 0xA54FF53AUL
+#define IV_4 0x510E527FUL
+#define IV_5 0x9B05688CUL
+#define IV_6 0x1F83D9ABUL
+#define IV_7 0x5BE0CD19UL
 
 #define CHUNK_START (1 << 0)
 #define CHUNK_END (1 << 1)
@@ -40,10 +45,14 @@ __constant__ uint32_t IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL,
 
 INLINE __device__ void cv_state_init(uint32_t *cv)
 {
-#pragma unroll 16
-    for (int i = 0; i < 8; i++) {
-        cv[i] = IV[i];
-    }
+    cv[0] = IV_0;
+    cv[1] = IV_1;
+    cv[2] = IV_2;
+    cv[3] = IV_3;
+    cv[4] = IV_4;
+    cv[5] = IV_5;
+    cv[6] = IV_6;
+    cv[7] = IV_7;
 }
 
 INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
@@ -216,32 +225,6 @@ INLINE __device__ uint32_t rotr32(uint32_t w, uint32_t c)
         G(0x3, 0x4, 0x9, 0xE, Mx(r, E), Mx(r, F)); \
     } while (0)
 
-// INLINE __device__ void round_fn(uint32_t state[16], const uint32_t *msg, size_t round)
-// {
-//     // printf("== state %d: ", round);
-//     // for (int i = 0; i < 16; i++) {
-//     //   printf("%d, ", state[i]);
-//     // }
-//     // printf("\n");
-//     // printf("== block %d: ", round);
-//     // for (int i = 0; i < 16; i++) {
-//     //   printf("%d, ", msg[schedule[i]]);
-//     // }
-//     // printf("\n\n");
-
-//     // Mix the columns.
-//     G(0, 4, 8, 12, msg[schedule[0]], msg[schedule[1]]);
-//     G(1, 5, 9, 13, msg[schedule[2]], msg[schedule[3]]);
-//     G(2, 6, 10, 14, msg[schedule[4]], msg[schedule[5]]);
-//     G(3, 7, 11, 15, msg[schedule[6]], msg[schedule[7]]);
-
-//     // Mix the rows.
-//     G(0, 5, 10, 15, msg[schedule[8]], msg[schedule[9]]);
-//     G(1, 6, 11, 12, msg[schedule[10]], msg[schedule[11]]);
-//     G(2, 7, 8, 13, msg[schedule[12]], msg[schedule[13]]);
-//     G(3, 4, 9, 14, msg[schedule[14]], msg[schedule[15]]);
-// }
-
 INLINE __device__ void compress_pre(uint32_t state[16], const uint32_t cv[8],
                                     const uint8_t block[BLAKE3_BLOCK_LEN],
                                     uint8_t block_len, uint8_t flags)
@@ -256,10 +239,10 @@ INLINE __device__ void compress_pre(uint32_t state[16], const uint32_t cv[8],
     state[5] = cv[5];
     state[6] = cv[6];
     state[7] = cv[7];
-    state[8] = IV[0];
-    state[9] = IV[1];
-    state[10] = IV[2];
-    state[11] = IV[3];
+    state[8] = IV_0;
+    state[9] = IV_1;
+    state[10] = IV_2;
+    state[11] = IV_3;
     state[12] = 0;
     state[13] = 0;
     state[14] = (uint32_t)block_len;
