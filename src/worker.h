@@ -81,14 +81,6 @@ uv_work_t req[parallel_mining_works] = {};
 mining_worker_t mining_workers[parallel_mining_works];
 uint8_t write_buffers[parallel_mining_works][2048 * 1024];
 
-void mining_workers_init()
-{
-    for (size_t i = 0; i < parallel_mining_works; i++) {
-        mining_worker_t *worker = mining_workers + i;
-        mining_worker_init(worker, (uint32_t)i);
-    }
-}
-
 mining_worker_t *load_req_worker(uv_work_t *req)
 {
     mining_req_t *mining_req = (mining_req_t *)req->data;
@@ -102,6 +94,15 @@ void store_req_data(ssize_t worker_id, mining_worker_t *worker)
     }
     mining_req_t *mining_req = (mining_req_t *)(req[worker_id].data);
     atomic_store(&(mining_req->worker), worker);
+}
+
+void mining_workers_init()
+{
+    for (size_t i = 0; i < parallel_mining_works; i++) {
+        mining_worker_t *worker = mining_workers + i;
+        mining_worker_init(worker, (uint32_t)i);
+        store_req_data(i, worker);
+    }
 }
 
 ssize_t write_new_block(mining_worker_t *worker)

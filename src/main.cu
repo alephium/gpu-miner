@@ -56,7 +56,7 @@ void mine(uv_work_t *req)
     }
 
     mining_worker_t *worker = load_req_worker(req);
-    mining_counts[to_mine_index] += mining_steps;
+    mining_counts[to_mine_index].fetch_add(mining_steps);
     setup_template(worker, load_template(to_mine_index));
 
     start_worker_mining(worker);
@@ -74,20 +74,11 @@ void after_mine(uv_work_t *req, int status)
     mining_template_t *template_ptr = load_worker__template(worker);
     job_t *job = template_ptr->job;
     uint32_t chain_index = job->from_group * group_nums + job->to_group;
-    mining_counts[chain_index] -= mining_steps;
-    mining_counts[chain_index] += worker->hasher->hash_count;
+    mining_counts[chain_index].fetch_sub(mining_steps);
+    mining_counts[chain_index].fetch_add(worker->hasher->hash_count);
 
     free_template(template_ptr);
     uv_queue_work(loop, req, mine, after_mine);
-}
-
-void mine_on_chain(mining_worker_t *worker, uint32_t to_mine_index)
-{
-    uint32_t worker_id = worker->id;
-    mining_counts[to_mine_index] += mining_steps;
-    setup_template(worker, load_template(to_mine_index));
-    store_req_data(worker_id, worker);
-    uv_queue_work(loop, &req[worker_id], mine, after_mine);
 }
 
 void start_mining()
@@ -97,8 +88,7 @@ void start_mining()
     start_time = time(NULL);
 
     for (uint32_t i = 0; i < parallel_mining_works; i++) {
-        mining_workers[i].id = i;
-        mine_on_chain(&mining_workers[i], i % chain_nums);
+        uv_queue_work(loop, &req[i], mine, after_mine);
     }
 }
 
@@ -161,7 +151,7 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 
         uint64_t total_hash = 0;
         for (int i = 0; i < chain_nums; i++) {
-            total_hash += mining_counts[i];
+            total_hash += mining_counts[i].load();
         }
         printf("hashrate: %lu (hash/sec)\n", total_hash / (current_time - start_time));
     }

@@ -98,7 +98,7 @@ int32_t next_chain_to_mine()
     int32_t to_mine_index = -1;
     uint64_t least_hash_count = UINT64_MAX;
     for (int32_t i = 0; i < chain_nums; i ++) {
-        uint64_t i_hash_count = mining_counts[i];
+        uint64_t i_hash_count = mining_counts[i].load();
         if (load_template(i) && (i_hash_count < least_hash_count)) {
             to_mine_index = i;
             least_hash_count = i_hash_count;
