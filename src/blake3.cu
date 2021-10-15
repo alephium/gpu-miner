@@ -50,7 +50,10 @@ __constant__ const uint8_t MSG_SCHEDULE[7][16] = {
 
 INLINE __device__ void cv_state_init(uint32_t *cv)
 {
-    memcpy(cv, IV, BLAKE3_KEY_LEN);
+#pragma unroll 16
+    for (int i = 0; i < 8; i++) {
+        cv[i] = IV[i];
+    }
 }
 
 INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
@@ -86,17 +89,16 @@ INLINE __device__ uint32_t rotr32(uint32_t w, uint32_t c)
     return (w >> c) | (w << (32 - c));
 }
 
-INLINE __device__ void g(uint32_t *state, size_t a, size_t b, size_t c, size_t d, uint32_t x, uint32_t y)
-{
-    state[a] = state[a] + state[b] + x;
-    state[d] = rotr32(state[d] ^ state[a], 16);
-    state[c] = state[c] + state[d];
-    state[b] = rotr32(state[b] ^ state[c], 12);
-    state[a] = state[a] + state[b] + y;
-    state[d] = rotr32(state[d] ^ state[a], 8);
-    state[c] = state[c] + state[d];
-    state[b] = rotr32(state[b] ^ state[c], 7);
-}
+#define g(state, a, b, c, d, x, y) do { \
+   state[a] = state[a] + state[b] + x;           \
+   state[d] = rotr32(state[d] ^ state[a], 16);   \
+   state[c] = state[c] + state[d];               \
+   state[b] = rotr32(state[b] ^ state[c], 12);   \
+   state[a] = state[a] + state[b] + y;           \
+   state[d] = rotr32(state[d] ^ state[a], 8);    \
+   state[c] = state[c] + state[d];               \
+   state[b] = rotr32(state[b] ^ state[c], 7);    \
+} while (0) 
 
 INLINE __device__ void round_fn(uint32_t state[16], const uint32_t *msg, size_t round)
 {
