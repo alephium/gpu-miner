@@ -48,14 +48,9 @@ __constant__ const uint8_t MSG_SCHEDULE[7][16] = {
 #define CHUNK_END (1 << 1)
 #define ROOT (1 << 3)
 
-typedef struct
+INLINE __device__ void cv_state_init(uint32_t *cv)
 {
-    uint32_t cv[8];
-} blake3_chunk_state;
-
-INLINE __device__ void chunk_state_init(blake3_chunk_state *self)
-{
-    memcpy(self->cv, IV, BLAKE3_KEY_LEN);
+    memcpy(cv, IV, BLAKE3_KEY_LEN);
 }
 
 INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
@@ -63,7 +58,7 @@ INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
                                                 uint8_t block_len,
                                                 uint8_t flags);
 
-INLINE __device__ void chunk_state_update(blake3_chunk_state *self, uint8_t *input, size_t initial_len)
+INLINE __device__ void chunk_state_update(uint32_t cv[8], uint8_t *input, size_t initial_len)
 {
     ssize_t input_len = initial_len;
     assert(input_len > 0 && input_len <= BLAKE3_CHUNK_LEN);
@@ -81,8 +76,7 @@ INLINE __device__ void chunk_state_update(blake3_chunk_state *self, uint8_t *inp
             memset(input + take, 0, BLAKE3_BLOCK_LEN - take);
         }
 
-        blake3_compress_in_place(self->cv, input, take,
-                                 maybe_start_flag | maybe_end_flag);
+        blake3_compress_in_place(cv, input, take, maybe_start_flag | maybe_end_flag);
         input += take;
     }
 }
@@ -200,7 +194,7 @@ typedef struct
     uint8_t buf[385];
     size_t buf_len;
 
-    blake3_chunk_state chunk;
+    uint32_t cv[8];
 
     uint8_t hash[64]; // 64 bytes needed as hash will used as block words as well
 
@@ -215,9 +209,9 @@ typedef struct
 
 INLINE __device__ void blake3_hasher_hash(const blake3_hasher *self, uint8_t *input, size_t input_len, uint8_t *out)
 {
-    chunk_state_init((blake3_chunk_state *)&self->chunk);
-    chunk_state_update((blake3_chunk_state *)&(self->chunk), input, input_len);
-    memcpy(out, self->chunk.cv, BLAKE3_OUT_LEN);
+    cv_state_init((uint32_t *)self->cv);
+    chunk_state_update((uint32_t *)&self->cv, input, input_len);
+    memcpy(out, self->cv, BLAKE3_OUT_LEN);
 }
 
 INLINE __device__ void blake3_hasher_double_hash(blake3_hasher *hasher)
@@ -323,7 +317,7 @@ int main()
     blob_t blob;
     hex_to_bytes("012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789", &blob);
     blob_t target;
-    hex_to_bytes("0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
+    hex_to_bytes("00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
 
     print_hex("target string: ", target.blob, target.len);
 
@@ -357,7 +351,7 @@ int main()
 
     memcpy(hasher->buf, blob.blob, blob.len);
     hasher->buf_len = blob.len;
-    hasher->buf[0] = 0;
+    hasher->buf[0] = 0xff;
     TRY(cudaMemcpyAsync(device_hasher, hasher, sizeof(blake3_hasher), cudaMemcpyHostToDevice, stream));
 
     blake3_hasher_mine<<<1, 16, 16 * sizeof(blake3_hasher), stream>>>(device_hasher);
