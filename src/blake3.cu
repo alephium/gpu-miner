@@ -34,16 +34,6 @@ __constant__ uint32_t IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL,
                                0xA54FF53AUL, 0x510E527FUL, 0x9B05688CUL,
                                0x1F83D9ABUL, 0x5BE0CD19UL};
 
-__constant__ const uint8_t MSG_SCHEDULE[7][16] = {
-    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
-    {2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8},
-    {3, 4, 10, 12, 13, 2, 7, 14, 6, 5, 9, 0, 11, 15, 8, 1},
-    {10, 7, 12, 9, 14, 3, 13, 15, 4, 0, 11, 2, 5, 8, 1, 6},
-    {12, 13, 9, 11, 15, 10, 14, 8, 7, 2, 5, 3, 0, 1, 6, 4},
-    {9, 14, 11, 5, 8, 12, 15, 1, 13, 3, 0, 10, 2, 6, 4, 7},
-    {11, 15, 5, 0, 1, 9, 8, 6, 14, 10, 2, 12, 3, 4, 7, 13},
-};
-
 #define CHUNK_START (1 << 0)
 #define CHUNK_END (1 << 1)
 #define ROOT (1 << 3)
@@ -89,7 +79,7 @@ INLINE __device__ uint32_t rotr32(uint32_t w, uint32_t c)
     return (w >> c) | (w << (32 - c));
 }
 
-#define g(state, a, b, c, d, x, y) do { \
+#define G(a, b, c, d, x, y) do { \
    state[a] = state[a] + state[b] + x;           \
    state[d] = rotr32(state[d] ^ state[a], 16);   \
    state[c] = state[c] + state[d];               \
@@ -100,41 +90,166 @@ INLINE __device__ uint32_t rotr32(uint32_t w, uint32_t c)
    state[b] = rotr32(state[b] ^ state[c], 7);    \
 } while (0) 
 
-INLINE __device__ void round_fn(uint32_t state[16], const uint32_t *msg, size_t round)
-{
+#define Z00 0
+#define Z01 1
+#define Z02 2
+#define Z03 3
+#define Z04 4
+#define Z05 5
+#define Z06 6
+#define Z07 7
+#define Z08 8
+#define Z09 9
+#define Z0A 10
+#define Z0B 11
+#define Z0C 12
+#define Z0D 13
+#define Z0E 14
+#define Z0F 15
+#define Z10 2
+#define Z11 6
+#define Z12 3
+#define Z13 10
+#define Z14 7
+#define Z15 0
+#define Z16 4
+#define Z17 13
+#define Z18 1
+#define Z19 11
+#define Z1A 12
+#define Z1B 5
+#define Z1C 9
+#define Z1D 14
+#define Z1E 15
+#define Z1F 8
+#define Z20 3
+#define Z21 4
+#define Z22 10
+#define Z23 12
+#define Z24 13
+#define Z25 2
+#define Z26 7
+#define Z27 14
+#define Z28 6
+#define Z29 5
+#define Z2A 9
+#define Z2B 0
+#define Z2C 11
+#define Z2D 15
+#define Z2E 8
+#define Z2F 1
+#define Z30 10
+#define Z31 7
+#define Z32 12
+#define Z33 9
+#define Z34 14
+#define Z35 3
+#define Z36 13
+#define Z37 15
+#define Z38 4
+#define Z39 0
+#define Z3A 11
+#define Z3B 2
+#define Z3C 5
+#define Z3D 8
+#define Z3E 1
+#define Z3F 6
+#define Z40 12
+#define Z41 13
+#define Z42 9
+#define Z43 11
+#define Z44 15
+#define Z45 10
+#define Z46 14
+#define Z47 8
+#define Z48 7
+#define Z49 2
+#define Z4A 5
+#define Z4B 3
+#define Z4C 0
+#define Z4D 1
+#define Z4E 6
+#define Z4F 4
+#define Z50 9
+#define Z51 14
+#define Z52 11
+#define Z53 5
+#define Z54 8
+#define Z55 12
+#define Z56 15
+#define Z57 1
+#define Z58 13
+#define Z59 3
+#define Z5A 0
+#define Z5B 10
+#define Z5C 2
+#define Z5D 6
+#define Z5E 4
+#define Z5F 7
+#define Z60 11
+#define Z61 15
+#define Z62 5
+#define Z63 0
+#define Z64 1
+#define Z65 9
+#define Z66 8
+#define Z67 6
+#define Z68 14
+#define Z69 10
+#define Z6A 2
+#define Z6B 12
+#define Z6C 3
+#define Z6D 4
+#define Z6E 7
+#define Z6F 13
 
-    // Select the message schedule based on the round.
-    const uint8_t *schedule = MSG_SCHEDULE[round];
+#define Mx(r, i)    (block_words[Z ## r ## i])
 
-    // printf("== state %d: ", round);
-    // for (int i = 0; i < 16; i++) {
-    //   printf("%d, ", state[i]);
-    // }
-    // printf("\n");
-    // printf("== block %d: ", round);
-    // for (int i = 0; i < 16; i++) {
-    //   printf("%d, ", msg[schedule[i]]);
-    // }
-    // printf("\n\n");
+#define ROUND_S(r)   do { \
+        G(0x0, 0x4, 0x8, 0xC, Mx(r, 0), Mx(r, 1)); \
+        G(0x1, 0x5, 0x9, 0xD, Mx(r, 2), Mx(r, 3)); \
+        G(0x2, 0x6, 0xA, 0xE, Mx(r, 4), Mx(r, 5)); \
+        G(0x3, 0x7, 0xB, 0xF, Mx(r, 6), Mx(r, 7)); \
+        G(0x0, 0x5, 0xA, 0xF, Mx(r, 8), Mx(r, 9)); \
+        G(0x1, 0x6, 0xB, 0xC, Mx(r, A), Mx(r, B)); \
+        G(0x2, 0x7, 0x8, 0xD, Mx(r, C), Mx(r, D)); \
+        G(0x3, 0x4, 0x9, 0xE, Mx(r, E), Mx(r, F)); \
+    } while (0)
 
-    // Mix the columns.
-    g(state, 0, 4, 8, 12, msg[schedule[0]], msg[schedule[1]]);
-    g(state, 1, 5, 9, 13, msg[schedule[2]], msg[schedule[3]]);
-    g(state, 2, 6, 10, 14, msg[schedule[4]], msg[schedule[5]]);
-    g(state, 3, 7, 11, 15, msg[schedule[6]], msg[schedule[7]]);
+// INLINE __device__ void round_fn(uint32_t state[16], const uint32_t *msg, size_t round)
+// {
+//     // printf("== state %d: ", round);
+//     // for (int i = 0; i < 16; i++) {
+//     //   printf("%d, ", state[i]);
+//     // }
+//     // printf("\n");
+//     // printf("== block %d: ", round);
+//     // for (int i = 0; i < 16; i++) {
+//     //   printf("%d, ", msg[schedule[i]]);
+//     // }
+//     // printf("\n\n");
 
-    // Mix the rows.
-    g(state, 0, 5, 10, 15, msg[schedule[8]], msg[schedule[9]]);
-    g(state, 1, 6, 11, 12, msg[schedule[10]], msg[schedule[11]]);
-    g(state, 2, 7, 8, 13, msg[schedule[12]], msg[schedule[13]]);
-    g(state, 3, 4, 9, 14, msg[schedule[14]], msg[schedule[15]]);
-}
+//     // Mix the columns.
+//     G(0, 4, 8, 12, msg[schedule[0]], msg[schedule[1]]);
+//     G(1, 5, 9, 13, msg[schedule[2]], msg[schedule[3]]);
+//     G(2, 6, 10, 14, msg[schedule[4]], msg[schedule[5]]);
+//     G(3, 7, 11, 15, msg[schedule[6]], msg[schedule[7]]);
+
+//     // Mix the rows.
+//     G(0, 5, 10, 15, msg[schedule[8]], msg[schedule[9]]);
+//     G(1, 6, 11, 12, msg[schedule[10]], msg[schedule[11]]);
+//     G(2, 7, 8, 13, msg[schedule[12]], msg[schedule[13]]);
+//     G(3, 4, 9, 14, msg[schedule[14]], msg[schedule[15]]);
+// }
 
 INLINE __device__ void compress_pre(uint32_t state[16], const uint32_t cv[8],
                                     const uint8_t block[BLAKE3_BLOCK_LEN],
                                     uint8_t block_len, uint8_t flags)
 {
     uint32_t block_words[16];
+    // for (int i = 0; i < 16; i++) {
+    //     block_words[i] = block[i];
+    // }
     memcpy(block_words, block, 16 * 4);
 
     state[0] = cv[0];
@@ -154,13 +269,13 @@ INLINE __device__ void compress_pre(uint32_t state[16], const uint32_t cv[8],
     state[14] = (uint32_t)block_len;
     state[15] = (uint32_t)flags;
 
-    round_fn(state, &block_words[0], 0);
-    round_fn(state, &block_words[0], 1);
-    round_fn(state, &block_words[0], 2);
-    round_fn(state, &block_words[0], 3);
-    round_fn(state, &block_words[0], 4);
-    round_fn(state, &block_words[0], 5);
-    round_fn(state, &block_words[0], 6);
+    ROUND_S(0);
+    ROUND_S(1);
+    ROUND_S(2);
+    ROUND_S(3);
+    ROUND_S(4);
+    ROUND_S(5);
+    ROUND_S(6);
 }
 
 INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
