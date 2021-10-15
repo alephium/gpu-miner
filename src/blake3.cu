@@ -322,8 +322,6 @@ INLINE __device__ void blake3_hasher_double_hash(blake3_hasher *hasher)
 
 INLINE __device__ bool check_target(uint8_t *hash, uint8_t *target_bytes, size_t target_len)
 {
-    assert(target_len <= 32);
-
     ssize_t zero_len = 32 - target_len;
     for (ssize_t i = 0; i < zero_len; i++)
     {
