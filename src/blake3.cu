@@ -376,10 +376,8 @@ INLINE __device__ void copy_good_nonce(blake3_hasher *thread_hasher, blake3_hash
 
 __global__ void blake3_hasher_mine(blake3_hasher *global_hasher)
 {
-    extern __shared__ blake3_hasher s_hashers[];
-    int t = threadIdx.x;
-    s_hashers[t] = *global_hasher;
-    blake3_hasher *hasher = &s_hashers[t];
+    blake3_hasher local_hasher = *global_hasher;
+    blake3_hasher *hasher = &local_hasher;
 
     hasher->hash_count = 0;
 
