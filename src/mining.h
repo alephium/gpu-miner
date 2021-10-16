@@ -1,12 +1,16 @@
 #ifndef ALEPHIUM_MINING_H
 #define ALEPHIUM_MINING_H
 
+#include <chrono>
 #include "blake3.cu"
-#include "time.h"
+
+typedef std::chrono::high_resolution_clock Time;
+typedef std::chrono::duration<double> duration_t;
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
 
 void start_worker_mining(mining_worker_t *worker)
 {
-    clock_t start = clock();
+    time_point_t start = Time::now();
     reset_worker(worker);
     TRY( cudaMemcpyAsync(worker->device_hasher, worker->hasher, sizeof(blake3_hasher), cudaMemcpyHostToDevice, worker->stream) );
 
@@ -28,8 +32,8 @@ void start_worker_mining(mining_worker_t *worker)
     if (worker->hasher->found_good_hash) {
         store_worker_found_good_hash(worker, true);
     }
-    clock_t end = clock();
-    // printf("=== mining time: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+    duration_t elapsed = Time::now() - start;
+    // printf("=== mining time: %fs\n", elapsed.count());
 }
 
 #endif // ALEPHIUM_MINING_H

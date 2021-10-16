@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <time.h>
 
 #include "constants.h"
 #include "uv.h"
@@ -17,7 +16,7 @@
 uv_loop_t *loop;
 uv_stream_t *tcp;
 
-time_t start_time = 0;
+time_point_t start_time = Time::now();
 
 void on_write_end(uv_write_t *req, int status)
 {
@@ -85,7 +84,7 @@ void start_mining()
 {
     assert(mining_templates_initialized == true);
 
-    start_time = time(NULL);
+    start_time = Time::now();
 
     for (uint32_t i = 0; i < parallel_mining_works; i++) {
         uv_queue_work(loop, &req[i], mine, after_mine);
@@ -146,14 +145,15 @@ server_message_t *decode_buf(const uv_buf_t *buf, ssize_t nread)
 
 void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 {
-    time_t current_time = time(NULL);
-    if (start_time != 0 && current_time > start_time) {
+    time_point_t current_time = Time::now();
+    if (current_time > start_time) {
 
         uint64_t total_hash = 0;
         for (int i = 0; i < chain_nums; i++) {
             total_hash += mining_counts[i].load();
         }
-        printf("hashrate: %lu (hash/sec)\n", total_hash / (current_time - start_time));
+        duration_t eplased = current_time - start_time;
+        printf("hashrate: %f (hash/sec)\n", total_hash / eplased.count());
     }
 
     if (nread < 0) {
@@ -235,6 +235,7 @@ int main(int argc, char **argv)
     int block_size;
     cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
     mining_workers_init(grid_size, block_size);
+    printf("Cuda grid size: %d, block size: %d\n", grid_size, block_size);
 
     char broker_ip[16];
     memset(broker_ip, '\0', sizeof(broker_ip));
