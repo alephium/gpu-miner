@@ -29,6 +29,8 @@
 #define BLAKE3_OUT_LEN 32
 #define BLAKE3_BLOCK_LEN 64
 #define BLAKE3_CHUNK_LEN 1024
+#define BLAKE3_BUF_CAP 384
+#define BLAKE3_BUF_LEN 326
 
 #define IV_0 0x6A09E667UL
 #define IV_1 0xBB67AE85UL
@@ -291,8 +293,7 @@ INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
 
 typedef struct
 {
-    uint8_t buf[384];
-    size_t buf_len;
+    uint8_t buf[BLAKE3_BUF_CAP];
 
     uint32_t cv[8];
 
@@ -316,8 +317,8 @@ INLINE __device__ void blake3_hasher_hash(const blake3_hasher *self, uint8_t *in
 
 INLINE __device__ void blake3_hasher_double_hash(blake3_hasher *hasher)
 {
-    blake3_hasher_hash(hasher, hasher->buf, hasher->buf_len, hasher->hash);
-    blake3_hasher_hash(hasher, hasher->hash, 32, hasher->hash);
+    blake3_hasher_hash(hasher, hasher->buf, BLAKE3_BUF_LEN, hasher->hash);
+    blake3_hasher_hash(hasher, hasher->hash, BLAKE3_OUT_LEN, hasher->hash);
 }
 
 INLINE __device__ bool check_target(uint8_t *hash, uint8_t *target_bytes, size_t target_len)
@@ -364,10 +365,12 @@ INLINE __device__ void update_nonce(blake3_hasher *hasher, uint64_t delta)
 
 INLINE __device__ void copy_good_nonce(blake3_hasher *thread_hasher, blake3_hasher *global_hasher)
 {
+#pragma unroll
     for (int i = 0; i < 24; i++)
     {
         global_hasher->buf[i] = thread_hasher->buf[i];
     }
+#pragma unroll
     for (int i = 0; i < 32; i++)
     {
         global_hasher->hash[i] = thread_hasher->hash[i];
@@ -515,7 +518,6 @@ void config_cuda(int *grid_size, int *block_size)
     cudaGetDeviceProperties(&props, deviceID);
     cudaOccupancyMaxPotentialBlockSize(grid_size, block_size, blake3_hasher_mine);
 
-    printf("==== props: %d\n", props.multiProcessorCount);
     int cores_size = get_sm_cores(props.major, props.minor) * props.multiProcessorCount;
     *grid_size = cores_size / *block_size * 3 / 2;
 }

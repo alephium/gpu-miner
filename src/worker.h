@@ -68,7 +68,8 @@ void reset_worker(mining_worker_t *worker)
     mining_template_t *template_ptr = worker->template_ptr.load();
     job_t *job = template_ptr->job;
     memcpy(hasher->buf + 24, job->header_blob.blob, job->header_blob.len);
-    hasher->buf_len = 24 + job->header_blob.len;
+    assert((24 + job->header_blob.len) == BLAKE3_BUF_LEN);
+    assert((24 + job->header_blob.len + 63) / 64 * 64 == BLAKE3_BUF_CAP);
     memcpy(hasher->target, job->target.blob, job->target.len);
     hasher->target_len = job->target.len;
     hasher->from_group = job->from_group;
