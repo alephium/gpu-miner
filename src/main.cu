@@ -12,7 +12,6 @@
 #include "worker.h"
 #include "template.h"
 #include "mining.h"
-#include "cuda_helper.cu"
 
 uv_loop_t *loop;
 uv_stream_t *tcp;
