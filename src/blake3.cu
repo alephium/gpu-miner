@@ -291,7 +291,7 @@ INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
 
 typedef struct
 {
-    uint8_t buf[385];
+    uint8_t buf[384];
     size_t buf_len;
 
     uint32_t cv[8];

@@ -19,6 +19,7 @@ void start_worker_mining(mining_worker_t *worker)
     TRY( cudaEventCreate(&stopEvent) );
 
     TRY( cudaEventRecord(startEvent, worker->stream) );
+    // blake3_hasher_mine<<<worker->grid_size, worker->block_size, 0, worker->stream>>>(worker->device_hasher);
     blake3_hasher_mine<<<worker->grid_size, worker->block_size, 0, worker->stream>>>(worker->device_hasher);
     TRY( cudaEventRecord(stopEvent, worker->stream) );
 

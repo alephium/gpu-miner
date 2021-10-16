@@ -12,6 +12,7 @@
 #include "worker.h"
 #include "template.h"
 #include "mining.h"
+#include "cuda_helper.cu"
 
 uv_loop_t *loop;
 uv_stream_t *tcp;
@@ -232,8 +233,8 @@ int hostname_to_ip(char *ip_address, char *hostname)
 int main(int argc, char **argv)
 {
     int grid_size;
-    int block_size;
-    cudaOccupancyMaxPotentialBlockSizeVariableSMem(&grid_size, &block_size, blake3_hasher_mine, [](const int n){ return n * sizeof(blake3_hasher); });
+    int block_size = 32;
+    config_cuda(&grid_size, &block_size);
     mining_workers_init(grid_size, block_size);
     printf("Cuda grid size: %d, block size: %d\n", grid_size, block_size);
 
