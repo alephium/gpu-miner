@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <atomic>
+#include <random>
 
 #include "messages.h"
 #include "blake3.cu"
@@ -25,6 +26,8 @@ typedef struct mining_worker_t {
 
     std::atomic<bool> found_good_hash;
     std::atomic<mining_template_t *> template_ptr;
+
+    std::mt19937 random_gen;
 } mining_worker_t;
 
 void mining_worker_init(mining_worker_t *self, uint32_t id, int grid_size, int block_size)
@@ -37,6 +40,8 @@ void mining_worker_init(mining_worker_t *self, uint32_t id, int grid_size, int b
     TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
     TRY( cudaMalloc(&(self->device_hasher), sizeof(blake3_hasher)) );
     bzero(self->hasher->hash, 64);
+
+    self->random_gen.seed(self->id);
 }
 
 bool load_worker__found_good_hash(mining_worker_t *worker)
@@ -61,10 +66,12 @@ void store_worker__template(mining_worker_t *worker, mining_template_t *template
 
 void reset_worker(mining_worker_t *worker)
 {
+    std::uniform_int_distribution<> distrib(0, UINT8_MAX);
     blake3_hasher *hasher = worker->hasher;
     for (int i = 0; i < 24; i++) {
-        hasher->buf[i] = rand();
+        hasher->buf[i] = distrib(worker->random_gen);
     }
+
     mining_template_t *template_ptr = worker->template_ptr.load();
     job_t *job = template_ptr->job;
     memcpy(hasher->buf + 24, job->header_blob.blob, job->header_blob.len);
