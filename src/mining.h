@@ -10,6 +10,8 @@ typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t
 
 void start_worker_mining(mining_worker_t *worker)
 {
+    cudaSetDevice(worker->device_id);
+
     time_point_t start = Time::now();
     reset_worker(worker);
     TRY( cudaMemcpyAsync(worker->device_hasher, worker->hasher, sizeof(blake3_hasher), cudaMemcpyHostToDevice, worker->stream) );

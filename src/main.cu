@@ -231,11 +231,13 @@ int hostname_to_ip(char *ip_address, char *hostname)
 
 int main(int argc, char **argv)
 {
-    int grid_size;
-    int block_size = 32;
-    config_cuda(&grid_size, &block_size);
-    mining_workers_init(grid_size, block_size);
-    printf("Cuda grid size: %d, block size: %d\n", grid_size, block_size);
+    int gpu_count;
+    cudaGetDeviceCount(&gpu_count);
+    printf("GPU count: %d\n", gpu_count);
+    for (int i = 0; i < gpu_count; i++) {
+        printf("GPU #%d has #%d cores\n", i, get_device_cores(i));
+    }
+    mining_workers_init(gpu_count);
 
     char broker_ip[16];
     memset(broker_ip, '\0', sizeof(broker_ip));

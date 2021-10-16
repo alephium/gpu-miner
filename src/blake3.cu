@@ -509,16 +509,21 @@ inline int get_sm_cores(int major, int minor) {
   return nGpuArchCoresPerSM[index - 1].Cores;
 }
 
-void config_cuda(int *grid_size, int *block_size)
+int get_device_cores(int device_id)
 {
-    int deviceID;
     cudaDeviceProp props;
-
-    cudaGetDevice(&deviceID);
-    cudaGetDeviceProperties(&props, deviceID);
-    cudaOccupancyMaxPotentialBlockSize(grid_size, block_size, blake3_hasher_mine);
+    cudaGetDeviceProperties(&props, device_id);
 
     int cores_size = get_sm_cores(props.major, props.minor) * props.multiProcessorCount;
+    return cores_size;
+}
+
+void config_cuda(int device_id, int *grid_size, int *block_size)
+{
+    cudaSetDevice(device_id);
+    cudaOccupancyMaxPotentialBlockSize(grid_size, block_size, blake3_hasher_mine);
+
+    int cores_size = get_device_cores(device_id);
     *grid_size = cores_size / *block_size * 3 / 2;
 }
 

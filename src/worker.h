@@ -17,6 +17,7 @@
 typedef struct mining_worker_t {
     uint32_t id;
 
+    int device_id;
     cudaStream_t stream;
     int grid_size;
     int block_size;
@@ -30,12 +31,15 @@ typedef struct mining_worker_t {
     std::mt19937 random_gen;
 } mining_worker_t;
 
-void mining_worker_init(mining_worker_t *self, uint32_t id, int grid_size, int block_size)
+void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
 {
     self->id = id;
+
+    self->device_id = device_id;
+    cudaSetDevice(device_id);
     TRY( cudaStreamCreate(&(self->stream)) );
-    self->grid_size = grid_size;
-    self->block_size = block_size;
+    config_cuda(device_id, &self->grid_size, &self->block_size);
+    printf("Worker %d: grid size %d, block size %d\n", id, self->grid_size, self->block_size);
 
     TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
     TRY( cudaMalloc(&(self->device_hasher), sizeof(blake3_hasher)) );
@@ -110,11 +114,11 @@ void store_req_data(ssize_t worker_id, mining_worker_t *worker)
     atomic_store(&(mining_req->worker), worker);
 }
 
-void mining_workers_init(int grid_size, int block_size)
+void mining_workers_init(int gpu_count)
 {
     for (size_t i = 0; i < parallel_mining_works; i++) {
         mining_worker_t *worker = mining_workers + i;
-        mining_worker_init(worker, (uint32_t)i, grid_size, block_size);
+        mining_worker_init(worker, (uint32_t)i, i % gpu_count);
         store_req_data(i, worker);
     }
 }
