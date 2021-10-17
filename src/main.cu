@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <chrono>
 
 #include "constants.h"
 #include "uv.h"
@@ -12,6 +13,10 @@
 #include "worker.h"
 #include "template.h"
 #include "mining.h"
+
+typedef std::chrono::high_resolution_clock Time;
+typedef std::chrono::duration<double> duration_t;
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
 
 uv_loop_t *loop;
 uv_stream_t *tcp;
@@ -48,6 +53,8 @@ void submit_new_block(mining_worker_t *worker)
 
 void mine(uv_work_t *req)
 {
+    time_point_t start = Time::now();
+
     int32_t to_mine_index = next_chain_to_mine();
     if (to_mine_index == -1) {
         printf("No task available, quitting...\n");
@@ -59,6 +66,9 @@ void mine(uv_work_t *req)
     setup_template(worker, load_template(to_mine_index));
 
     start_worker_mining(worker);
+
+    duration_t elapsed = Time::now() - start;
+    // printf("=== mining time: %fs\n", elapsed.count());
 }
 
 void after_mine(uv_work_t *req, int status)
