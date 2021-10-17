@@ -43,6 +43,7 @@ void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
 
     TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
     TRY( cudaMalloc(&(self->device_hasher), sizeof(blake3_hasher)) );
+    bzero(self->hasher->buf, BLAKE3_BUF_CAP);
     bzero(self->hasher->hash, 64);
 
     self->random_gen.seed(self->id);
