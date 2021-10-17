@@ -300,7 +300,6 @@ typedef struct
     uint8_t hash[64]; // 64 bytes needed as hash will used as block words as well
 
     uint8_t target[32];
-    size_t target_len;
     uint32_t from_group;
     uint32_t to_group;
 
@@ -321,24 +320,16 @@ INLINE __device__ void blake3_hasher_double_hash(blake3_hasher *hasher)
     blake3_hasher_hash(hasher, hasher->hash, BLAKE3_OUT_LEN, hasher->hash);
 }
 
-INLINE __device__ bool check_target(uint8_t *hash, uint8_t *target_bytes, size_t target_len)
+INLINE __device__ bool check_target(uint8_t *hash, uint8_t *target)
 {
-    ssize_t zero_len = 32 - target_len;
-    for (ssize_t i = 0; i < zero_len; i++)
+#pragma unroll
+    for (ssize_t i = 0; i < 32; i++)
     {
-        if (hash[i] != 0)
+        if (hash[i] > target[i])
         {
             return false;
         }
-    }
-    uint8_t *non_zero_hash = hash + zero_len;
-    for (ssize_t i = 0; i < target_len; i++)
-    {
-        if (non_zero_hash[i] > target_bytes[i])
-        {
-            return false;
-        }
-        else if (non_zero_hash[i] < target_bytes[i])
+        else if (hash[i] < target[i])
         {
             return true;
         }
@@ -352,9 +343,9 @@ INLINE __device__ bool check_index(uint8_t *hash, uint32_t from_group, uint32_t 
     return (big_index / group_nums == from_group) && (big_index % group_nums == to_group);
 }
 
-INLINE __device__ bool check_hash(uint8_t *hash, uint8_t *target, size_t target_len, uint32_t from_group, uint32_t to_group)
+INLINE __device__ bool check_hash(uint8_t *hash, uint8_t *target, uint32_t from_group, uint32_t to_group)
 {
-    return check_target(hash, target, target_len) && check_index(hash, from_group, to_group);
+    return check_target(hash, target) && check_index(hash, from_group, to_group);
 }
 
 INLINE __device__ void update_nonce(blake3_hasher *hasher, uint64_t delta)
@@ -396,7 +387,7 @@ __global__ void blake3_hasher_mine(blake3_hasher *global_hasher)
         *short_nonce += stride;
         blake3_hasher_double_hash(hasher);
 
-        if (check_hash(hasher->hash, hasher->target, hasher->target_len, hasher->from_group, hasher->to_group))
+        if (check_hash(hasher->hash, hasher->target, hasher->from_group, hasher->to_group))
         {
             printf("tid %d found it !!\n", tid);
             if (atomicCAS(&global_hasher->found_good_hash, 0, 1) == 0)

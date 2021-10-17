@@ -81,10 +81,14 @@ void reset_worker(mining_worker_t *worker)
     memcpy(hasher->buf + 24, job->header_blob.blob, job->header_blob.len);
     assert((24 + job->header_blob.len) == BLAKE3_BUF_LEN);
     assert((24 + job->header_blob.len + 63) / 64 * 64 == BLAKE3_BUF_CAP);
-    memcpy(hasher->target, job->target.blob, job->target.len);
-    hasher->target_len = job->target.len;
+
+    size_t target_zero_len = 32 - job->target.len;
+    bzero(hasher->target, target_zero_len);
+    memcpy(hasher->target + target_zero_len, job->target.blob, job->target.len);
+
     hasher->from_group = job->from_group;
     hasher->to_group = job->to_group;
+
     hasher->hash_count = 0;
     hasher->found_good_hash = false;
 
