@@ -102,7 +102,6 @@ typedef struct mining_req {
 
 uv_work_t req[max_worker_num] = { NULL };
 mining_worker_t mining_workers[max_worker_num];
-uint8_t* write_buffers[max_worker_num];
 
 mining_worker_t *load_req_worker(uv_work_t *req)
 {
@@ -128,12 +127,12 @@ void mining_workers_init(int gpu_count)
     }
 }
 
-ssize_t write_new_block(mining_worker_t *worker)
+ssize_t write_new_block(mining_worker_t *worker, uint8_t *write_buf)
 {
     uint32_t worker_id = worker->id;
     job_t *job = load_worker__template(worker)->job;
     uint8_t *nonce = worker->hasher->buf;
-    uint8_t *write_pos = write_buffers[worker_id];
+    uint8_t *write_pos = write_buf;
 
     ssize_t block_size = 24 + job->header_blob.len + job->txs_blob.len;
     ssize_t message_size = 1 + 4 + block_size;

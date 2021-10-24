@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <chrono>
+#include <mutex>
 
 #include "constants.h"
 #include "uv.h"
@@ -42,6 +44,8 @@ void on_write_end(uv_write_t *req, int status)
     printf("sent new block\n");
 }
 
+std::mutex write_mutex;
+uint8_t write_buffer[4096 * 1024];
 void submit_new_block(mining_worker_t *worker)
 {
     if (!expire_template_for_new_block(load_worker__template(worker))) {
@@ -49,8 +53,10 @@ void submit_new_block(mining_worker_t *worker)
         return;
     }
 
-    ssize_t buf_size = write_new_block(worker);
-    uv_buf_t buf = uv_buf_init((char *)write_buffers[worker->id], buf_size);
+    const std::lock_guard<std::mutex> lock(write_mutex);
+
+    ssize_t buf_size = write_new_block(worker, write_buffer);
+    uv_buf_t buf = uv_buf_init((char *)write_buffer, buf_size);
     print_hex("new block", (uint8_t *)worker->hasher->hash, 32);
 
     uv_write_t *write_req = (uv_write_t *)malloc(sizeof(uv_write_t));
