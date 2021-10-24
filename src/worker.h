@@ -29,6 +29,8 @@ typedef struct mining_worker_t {
     std::atomic<mining_template_t *> template_ptr;
 
     std::mt19937 random_gen;
+
+    uv_async_t async;
 } mining_worker_t;
 
 void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)

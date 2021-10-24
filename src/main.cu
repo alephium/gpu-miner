@@ -91,6 +91,12 @@ void mine_with_req(uv_work_t *req)
     mine(worker);
 }
 
+void mine_with_async(uv_async_t *handle)
+{
+    mining_worker_t *worker = (mining_worker_t *)handle->data;
+    mine(worker);
+}
+
 void after_mine(uv_work_t *req, int status)
 {
     return;
@@ -110,7 +116,8 @@ void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data)
     mining_counts[chain_index].fetch_add(worker->hasher->hash_count);
 
     free_template(template_ptr);
-    uv_queue_work(loop, &req[worker->id], mine_with_req, after_mine);
+    worker->async.data = worker;
+    uv_async_send(&(worker->async));
 }
 
 void start_mining()
@@ -299,6 +306,9 @@ int main(int argc, char **argv)
     uv_ip4_addr(broker_ip, 10973, &dest);
 
     uv_tcp_connect(connect, socket, (const struct sockaddr*)&dest, on_connect);
+    for (int i = 0; i < worker_count; i++) {
+        uv_async_init(loop, &(mining_workers[i].async), mine_with_async);
+    }
     uv_run(loop, UV_RUN_DEFAULT);
 
     return (0);
