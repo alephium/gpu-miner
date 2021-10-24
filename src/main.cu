@@ -66,7 +66,7 @@ void submit_new_block(mining_worker_t *worker)
     uv_write(write_req, tcp, &buf, buf_count, on_write_end);
 }
 
-void mine(uv_work_t *req)
+void mine(mining_worker_t *worker)
 {
     time_point_t start = Time::now();
 
@@ -76,7 +76,6 @@ void mine(uv_work_t *req)
         exit(1);
     }
 
-    mining_worker_t *worker = load_req_worker(req);
     mining_counts[to_mine_index].fetch_add(mining_steps);
     setup_template(worker, load_template(to_mine_index));
 
@@ -86,12 +85,21 @@ void mine(uv_work_t *req)
     // printf("=== mining time: %fs\n", elapsed.count());
 }
 
-void after_mine(uv_work_t *req, int status)
+void mine_with_req(uv_work_t *req)
 {
     mining_worker_t *worker = load_req_worker(req);
-    // printf("after mine: %d %d %d\n", work->job->from_group, work->job->to_group, worker->hash_count);
+    mine(worker);
+}
 
-    if (load_worker__found_good_hash(worker)) {
+void after_mine(uv_work_t *req, int status)
+{
+    return;
+}
+
+void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data) {
+    mining_worker_t *worker = (mining_worker_t *)data;
+    if (worker->hasher->found_good_hash) {
+        store_worker_found_good_hash(worker, true);
         submit_new_block(worker);
     }
 
@@ -102,7 +110,7 @@ void after_mine(uv_work_t *req, int status)
     mining_counts[chain_index].fetch_add(worker->hasher->hash_count);
 
     free_template(template_ptr);
-    uv_queue_work(loop, req, mine, after_mine);
+    uv_queue_work(loop, &req[worker->id], mine_with_req, after_mine);
 }
 
 void start_mining()
@@ -112,7 +120,7 @@ void start_mining()
     start_time = Time::now();
 
     for (uint32_t i = 0; i < worker_count.load(); i++) {
-        uv_queue_work(loop, &req[i], mine, after_mine);
+        uv_queue_work(loop, &req[i], mine_with_req, after_mine);
     }
 }
 

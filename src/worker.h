@@ -129,7 +129,6 @@ void mining_workers_init(int gpu_count)
 
 ssize_t write_new_block(mining_worker_t *worker, uint8_t *write_buf)
 {
-    uint32_t worker_id = worker->id;
     job_t *job = load_worker__template(worker)->job;
     uint8_t *nonce = worker->hasher->buf;
     uint8_t *write_pos = write_buf;

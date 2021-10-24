@@ -3,6 +3,8 @@
 
 #include "blake3.cu"
 
+void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data);
+
 void start_worker_mining(mining_worker_t *worker)
 {
     cudaSetDevice(worker->device_id);
@@ -20,15 +22,11 @@ void start_worker_mining(mining_worker_t *worker)
     TRY( cudaEventRecord(stopEvent, worker->stream) );
 
     TRY( cudaMemcpyAsync(worker->hasher, worker->device_hasher, sizeof(blake3_hasher), cudaMemcpyDeviceToHost, worker->stream) );
-    TRY( cudaStreamSynchronize(worker->stream) );
+    TRY( cudaStreamAddCallback(worker->stream, worker_stream_callback, worker, 0) );
 
     float time;
     TRY( cudaEventElapsedTime(&time, startEvent, stopEvent) );
     // printf(" === mining time: %f\n", time);
-
-    if (worker->hasher->found_good_hash) {
-        store_worker_found_good_hash(worker, true);
-    }
 }
 
 #endif // ALEPHIUM_MINING_H
