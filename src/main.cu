@@ -23,6 +23,15 @@ uv_stream_t *tcp;
 
 time_point_t start_time = Time::now();
 
+std::atomic<int> gpu_count;
+std::atomic<int> worker_count;
+
+void setup_gpu_worker_count(int _gpu_count, int _worker_count)
+{
+    gpu_count.store(_gpu_count);
+    worker_count.store(_worker_count);
+}
+
 void on_write_end(uv_write_t *req, int status)
 {
     if (status == -1) {
@@ -96,7 +105,7 @@ void start_mining()
 
     start_time = Time::now();
 
-    for (uint32_t i = 0; i < parallel_mining_works; i++) {
+    for (uint32_t i = 0; i < worker_count.load(); i++) {
         uv_queue_work(loop, &req[i], mine, after_mine);
     }
 }
@@ -248,6 +257,7 @@ int main(int argc, char **argv)
         printf("GPU #%d has #%d cores\n", i, get_device_cores(i));
     }
     mining_workers_init(gpu_count);
+    setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);
 
     char broker_ip[16];
     memset(broker_ip, '\0', sizeof(broker_ip));
