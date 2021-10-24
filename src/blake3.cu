@@ -311,7 +311,10 @@ INLINE __device__ void blake3_hasher_hash(const blake3_hasher *self, uint8_t *in
 {
     cv_state_init((uint32_t *)self->cv);
     chunk_state_update((uint32_t *)&self->cv, input, input_len);
-    memcpy(out, self->cv, BLAKE3_OUT_LEN);
+#pragma unroll
+    for (int i = 0; i < 8; i ++) {
+        ((uint32_t *) out)[i] = self->cv[i];
+    }
 }
 
 INLINE __device__ void blake3_hasher_double_hash(blake3_hasher *hasher)
