@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.2.0-devel-ubuntu20.04 AS builder
+FROM nvidia/cuda:11.0-devel-ubuntu20.04 AS builder
 
 WORKDIR /src
 
@@ -9,7 +9,7 @@ RUN apt install -y libuv1-dev
 COPY . /src
 RUN make gpu
 
-FROM ubuntu:20.04
+FROM nvidia/cuda:11.0-base
 
 RUN apt update
 RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
@@ -18,6 +18,6 @@ RUN rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /src/bin/gpu-miner /gpu-miner
 
-USER nobody
+USER root
 
 ENTRYPOINT ["/gpu-miner"]
