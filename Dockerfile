@@ -9,7 +9,7 @@ RUN apt install -y libuv1-dev
 COPY . /src
 RUN make gpu
 
-FROM nvidia/cuda:11.2.0-devel-ubuntu20.04
+FROM ubuntu:20.04
 
 RUN apt update
 RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
