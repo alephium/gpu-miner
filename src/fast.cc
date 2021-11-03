@@ -235,6 +235,7 @@
     } while (0)
 
 // input.len == 326, i.e. 326 / 4 = 81.5 words, 326 / 64 = 5.09375 message blocks
+// input are padded with zeros to make 6 full message block
 void blake3_double_hash(uint32_t *input, uint32_t *output)
 {
     uint32_t M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, MA, MB, MC, MD, ME, MF; // message block
@@ -250,7 +251,40 @@ void blake3_double_hash(uint32_t *input, uint32_t *output)
     H5 = IV_5;
     H6 = IV_6;
     H7 = IV_7;
-    HASH_BLOCK(0, 0, CHUNK_START | CHUNK_END | ROOT);
+    HASH_BLOCK(0, 64, CHUNK_START);
+    HASH_BLOCK(1, 64, 0);
+    HASH_BLOCK(2, 64, 0);
+    HASH_BLOCK(3, 64, 0);
+    HASH_BLOCK(4, 64, 0);
+    HASH_BLOCK(5, 6, CHUNK_END | ROOT);
+
+    M0 = H0;
+    M1 = H1;
+    M2 = H2;
+    M3 = H3;
+    M4 = H4;
+    M5 = H5;
+    M6 = H6;
+    M7 = H7;
+    M8 = 0;
+    M9 = 0;
+    MA = 0;
+    MB = 0;
+    MC = 0;
+    MD = 0;
+    ME = 0;
+    MF = 0;
+    H0 = IV_0;
+    H1 = IV_1;
+    H2 = IV_2;
+    H3 = IV_3;
+    H4 = IV_4;
+    H5 = IV_5;
+    H6 = IV_6;
+    H7 = IV_7;
+    BLEN = 32;
+    FLAGS = CHUNK_START | CHUNK_END | ROOT;
+    COMPRESS;
 
     output[0] = H0;
     output[1] = H1;
@@ -287,10 +321,10 @@ void blake3_double_hash(uint32_t *input, uint32_t *output)
 
 int main()
 {
-    uint32_t input[16] = {0};
+    uint32_t input[96] = {0};
     uint32_t output[8];
 
     print_hex("input", (uint8_t *)input, 64);
     blake3_double_hash(input, output);
-    print_hex("output", (uint8_t *)output, 32);
+    print_hex("output", (uint8_t *)output, 32); // b6d328a8bf1ab2bd37f15e507ec78fdf4710c18a61e47b99d82ac98b4096f323
 }
