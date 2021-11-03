@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define BLAKE3_KEY_LEN 32
 #define BLAKE3_OUT_LEN 32
@@ -213,31 +214,51 @@
 #define HASH_BLOCK(r, blen, flags) \
     do                             \
     {                              \
-        M0 = input[0x##r##0];      \
-        M1 = input[0x##r##1];      \
-        M2 = input[0x##r##2];      \
-        M3 = input[0x##r##3];      \
-        M4 = input[0x##r##4];      \
-        M5 = input[0x##r##5];      \
-        M6 = input[0x##r##6];      \
-        M7 = input[0x##r##7];      \
-        M8 = input[0x##r##8];      \
-        M9 = input[0x##r##9];      \
-        MA = input[0x##r##A];      \
-        MB = input[0x##r##B];      \
-        MC = input[0x##r##C];      \
-        MD = input[0x##r##D];      \
-        ME = input[0x##r##E];      \
-        MF = input[0x##r##F];      \
+        M0 = input##r##0;          \
+        M1 = input##r##1;          \
+        M2 = input##r##2;          \
+        M3 = input##r##3;          \
+        M4 = input##r##4;          \
+        M5 = input##r##5;          \
+        M6 = input##r##6;          \
+        M7 = input##r##7;          \
+        M8 = input##r##8;          \
+        M9 = input##r##9;          \
+        MA = input##r##A;          \
+        MB = input##r##B;          \
+        MC = input##r##C;          \
+        MD = input##r##D;          \
+        ME = input##r##E;          \
+        MF = input##r##F;          \
         BLEN = (blen);             \
         FLAGS = (flags);           \
         COMPRESS;                  \
     } while (0)
 
-// input.len == 326, i.e. 326 / 4 = 81.5 words, 326 / 64 = 5.09375 message blocks
-// input are padded with zeros to make 6 full message block
-void blake3_double_hash(uint32_t *input, uint32_t *output)
+typedef struct
 {
+    uint8_t buf[BLAKE3_BUF_CAP];
+
+    uint8_t hash[32]; // 64 bytes needed as hash will used as block words as well
+
+    uint8_t target[32];
+    uint32_t from_group;
+    uint32_t to_group;
+
+    uint32_t hash_count;
+    int found_good_hash;
+} blake3_hasher;
+
+void blake3_hasher_mine(blake3_hasher *hasher)
+{
+    uint32_t *input = (uint32_t *)hasher->buf;
+    uint32_t input00 = input[0x00], input01 = input[0x01], input02 = input[0x02], input03 = input[0x03], input04 = input[0x04], input05 = input[0x05], input06 = input[0x06], input07 = input[0x07], input08 = input[0x08], input09 = input[0x09], input0A = input[0x0A], input0B = input[0x0B], input0C = input[0x0C], input0D = input[0x0D], input0E = input[0x0E], input0F = input[0x0F];
+    uint32_t input10 = input[0x10], input11 = input[0x11], input12 = input[0x12], input13 = input[0x13], input14 = input[0x14], input15 = input[0x15], input16 = input[0x16], input17 = input[0x17], input18 = input[0x18], input19 = input[0x19], input1A = input[0x1A], input1B = input[0x1B], input1C = input[0x1C], input1D = input[0x1D], input1E = input[0x1E], input1F = input[0x1F];
+    uint32_t input20 = input[0x20], input21 = input[0x21], input22 = input[0x22], input23 = input[0x23], input24 = input[0x24], input25 = input[0x25], input26 = input[0x26], input27 = input[0x27], input28 = input[0x28], input29 = input[0x29], input2A = input[0x2A], input2B = input[0x2B], input2C = input[0x2C], input2D = input[0x2D], input2E = input[0x2E], input2F = input[0x2F];
+    uint32_t input30 = input[0x30], input31 = input[0x31], input32 = input[0x32], input33 = input[0x33], input34 = input[0x34], input35 = input[0x35], input36 = input[0x36], input37 = input[0x37], input38 = input[0x38], input39 = input[0x39], input3A = input[0x3A], input3B = input[0x3B], input3C = input[0x3C], input3D = input[0x3D], input3E = input[0x3E], input3F = input[0x3F];
+    uint32_t input40 = input[0x40], input41 = input[0x41], input42 = input[0x42], input43 = input[0x43], input44 = input[0x44], input45 = input[0x45], input46 = input[0x46], input47 = input[0x47], input48 = input[0x48], input49 = input[0x49], input4A = input[0x4A], input4B = input[0x4B], input4C = input[0x4C], input4D = input[0x4D], input4E = input[0x4E], input4F = input[0x4F];
+    uint32_t input50 = input[0x50], input51 = input[0x51], input52 = input[0x52], input53 = input[0x53], input54 = input[0x54], input55 = input[0x55], input56 = input[0x56], input57 = input[0x57], input58 = input[0x58], input59 = input[0x59], input5A = input[0x5A], input5B = input[0x5B], input5C = input[0x5C], input5D = input[0x5D], input5E = input[0x5E], input5F = input[0x5F];
+
     uint32_t M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, MA, MB, MC, MD, ME, MF; // message block
     uint32_t V0, V1, V2, V3, V4, V5, V6, V7, V8, V9, VA, VB, VC, VD, VE, VF; // internal state
     uint32_t H0, H1, H2, H3, H4, H5, H6, H7;                                 // chain value
@@ -286,6 +307,7 @@ void blake3_double_hash(uint32_t *input, uint32_t *output)
     FLAGS = CHUNK_START | CHUNK_END | ROOT;
     COMPRESS;
 
+    uint32_t *output = (uint32_t *)hasher->hash;
     output[0] = H0;
     output[1] = H1;
     output[2] = H2;
@@ -296,35 +318,14 @@ void blake3_double_hash(uint32_t *input, uint32_t *output)
     output[7] = H7;
 }
 
-// typedef struct
-// {
-//     uint8_t buf[BLAKE3_BUF_CAP];
-
-//     uint32_t cv[8];
-
-//     uint8_t hash[64]; // 64 bytes needed as hash will used as block words as well
-
-//     uint8_t target[32];
-//     uint32_t from_group;
-//     uint32_t to_group;
-
-//     uint32_t hash_count;
-//     int found_good_hash;
-// } blake3_hasher;
-
-// void blake3_hasher_mine(blake3_hasher *hasher)
-// {
-
-// }
-
 #include "messages.h"
 
 int main()
 {
-    uint32_t input[96] = {0};
-    uint32_t output[8];
+    blake3_hasher *hasher = (blake3_hasher *)malloc(sizeof(blake3_hasher));
+    bzero(hasher->buf, BLAKE3_BUF_CAP);
 
-    print_hex("input", (uint8_t *)input, 64);
-    blake3_double_hash(input, output);
-    print_hex("output", (uint8_t *)output, 32); // b6d328a8bf1ab2bd37f15e507ec78fdf4710c18a61e47b99d82ac98b4096f323
+    print_hex("input", (uint8_t *)hasher->buf, 384);
+    blake3_hasher_mine(hasher);
+    print_hex("output", (uint8_t *)hasher->hash, 32); // b6d328a8bf1ab2bd37f15e507ec78fdf4710c18a61e47b99d82ac98b4096f323
 }
