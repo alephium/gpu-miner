@@ -325,26 +325,30 @@ typedef struct
         output[7] = H7;                              \
     } while (0)
 
-#define UPDATE_NONCE                                 \
-    do                                               \
-    {                                                \
-        hasher->found_good_hash = 1;                 \
-        uint32_t *nonce = (uint32_t *)hasher->buf; \
-        nonce[0] = input00; \
-        nonce[1] = input01; \
-        nonce[2] = input02; \
-        nonce[3] = input03; \
-        nonce[4] = input04; \
-        nonce[5] = input05; \
-        uint32_t *output = (uint32_t *)hasher->hash; \
-        output[0] = H0;                              \
-        output[1] = H1;                              \
-        output[2] = H2;                              \
-        output[3] = H3;                              \
-        output[4] = H4;                              \
-        output[5] = H5;                              \
-        output[6] = H6;                              \
-        output[7] = H7;                              \
+#define UPDATE_NONCE                                        \
+    do                                                      \
+    {                                                       \
+        if (atomicCAS(&hasher->found_good_hash, 0, 1) == 0) \
+        {                                                   \
+            uint32_t *nonce = (uint32_t *)hasher->buf;      \
+            nonce[0] = input00;                             \
+            nonce[1] = input01;                             \
+            nonce[2] = input02;                             \
+            nonce[3] = input03;                             \
+            nonce[4] = input04;                             \
+            nonce[5] = input05;                             \
+            uint32_t *output = (uint32_t *)hasher->hash;    \
+            output[0] = H0;                                 \
+            output[1] = H1;                                 \
+            output[2] = H2;                                 \
+            output[3] = H3;                                 \
+            output[4] = H4;                                 \
+            output[5] = H5;                                 \
+            output[6] = H6;                                 \
+            output[7] = H7;                                 \
+        }                                                   \
+        atomicAdd(&hasher->hash_count, hash_count);         \
+        return;                                             \
     } while (0)
 
 #define CHECK_INDEX                                                                         \
@@ -354,7 +358,6 @@ typedef struct
         if ((big_index / group_nums == from_group) && (big_index % group_nums == to_group)) \
         {                                                                                   \
             UPDATE_NONCE;                                                                   \
-            goto end;                                                                       \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
@@ -366,19 +369,19 @@ typedef struct
 #define MASK1(n) (n & 0x0000FF00)
 #define MASK2(n) (n & 0x00FF0000)
 #define MASK3(n) (n & 0xFF000000)
-#define CHECK_TARGET(m, n)                 \
-    do                                     \
-    {                                      \
-        m0 = MASK##n(H##m);                \
-        m1 = MASK##n(target##m);           \
-        if (m0 > m1)                       \
-        {                                  \
-            goto cnt;                      \
-        }                                  \
-        else if (m0 < m1)                  \
-        {                                  \
-            CHECK_INDEX;                   \
-        }                                  \
+#define CHECK_TARGET(m, n)       \
+    do                           \
+    {                            \
+        m0 = MASK##n(H##m);      \
+        m1 = MASK##n(target##m); \
+        if (m0 > m1)             \
+        {                        \
+            goto cnt;            \
+        }                        \
+        else if (m0 < m1)        \
+        {                        \
+            CHECK_INDEX;         \
+        }                        \
     } while (0)
 
 #define CHECK_POW           \
@@ -409,7 +412,7 @@ __global__ void blake3_hasher_mine(blake3_hasher *hasher)
     uint32_t input40 = input[0x40], input41 = input[0x41], input42 = input[0x42], input43 = input[0x43], input44 = input[0x44], input45 = input[0x45], input46 = input[0x46], input47 = input[0x47], input48 = input[0x48], input49 = input[0x49], input4A = input[0x4A], input4B = input[0x4B], input4C = input[0x4C], input4D = input[0x4D], input4E = input[0x4E], input4F = input[0x4F];
     uint32_t input50 = input[0x50], input51 = input[0x51], input52 = input[0x52], input53 = input[0x53], input54 = input[0x54], input55 = input[0x55], input56 = input[0x56], input57 = input[0x57], input58 = input[0x58], input59 = input[0x59], input5A = input[0x5A], input5B = input[0x5B], input5C = input[0x5C], input5D = input[0x5D], input5E = input[0x5E], input5F = input[0x5F];
     uint32_t *target = (uint32_t *)hasher->target;
-    uint32_t target0 = target[0], target1 = target[1], target2 = target[2];//, target3 = target[3], target4 = target[4], target5 = target[5], target6 = target[6], target7 = target[7];
+    uint32_t target0 = target[0], target1 = target[1], target2 = target[2]; //, target3 = target[3], target4 = target[4], target5 = target[5], target6 = target[6], target7 = target[7];
     uint32_t from_group = hasher->from_group, to_group = hasher->to_group;
     uint32_t hash_count = 0;
 
@@ -421,18 +424,16 @@ __global__ void blake3_hasher_mine(blake3_hasher *hasher)
     while (hash_count < mining_steps)
     {
         hash_count += 1;
-        // printf("count: %u\n", hash_count & 0xFF);
+        // printf("count: %u\n", hash_count);
         input00 += 1;
         DOUBLE_HASH;
         CHECK_POW;
     cnt:;
     }
-
-end:
-    hasher->hash_count += hash_count;
+    atomicAdd(&hasher->hash_count, hash_count);
 }
 
-#ifdef BLAKE3_TEST
+// #ifdef BLAKE3_TEST
 int main()
 {
     blob_t target;
@@ -458,6 +459,7 @@ int main()
     char *hash_string1 = bytes_to_hex(hasher->hash, 32);
     printf("good: %d\n", hasher->found_good_hash);
     printf("nonce: %d\n", hasher->buf[0]);
+    printf("count: %d\n", hasher->hash_count);
     printf("%s\n", hash_string1); // 0003119e5bf02115e1c8496008fbbcec4884e0be7f9dc372cd4316a51d065283
 }
-#endif // BLAKE3_TEST
+// #endif // BLAKE3_TEST
