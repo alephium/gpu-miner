@@ -1,7 +1,7 @@
 #ifndef ALEPHIUM_MINING_H
 #define ALEPHIUM_MINING_H
 
-#include "blake3.cu"
+#include "fast.cu"
 
 void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data);
 
@@ -18,6 +18,8 @@ void start_worker_mining(mining_worker_t *worker)
 
     TRY( cudaEventRecord(startEvent, worker->stream) );
     // blake3_hasher_mine<<<worker->grid_size, worker->block_size, 0, worker->stream>>>(worker->device_hasher);
+    worker->grid_size = 9;
+    worker->block_size = 384;
     blake3_hasher_mine<<<worker->grid_size, worker->block_size, 0, worker->stream>>>(worker->device_hasher);
     TRY( cudaEventRecord(stopEvent, worker->stream) );
 

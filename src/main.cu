@@ -10,7 +10,7 @@
 #include "constants.h"
 #include "uv.h"
 #include "messages.h"
-#include "blake3.cu"
+#include "fast.cu"
 #include "pow.h"
 #include "worker.h"
 #include "template.h"

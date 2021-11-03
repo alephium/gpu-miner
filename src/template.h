@@ -9,7 +9,6 @@
 #include <atomic>
 
 #include "messages.h"
-// #include "blake3.cu"
 #include "uv.h"
 #include "constants.h"
 

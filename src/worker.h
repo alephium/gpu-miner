@@ -10,7 +10,7 @@
 #include <random>
 
 #include "messages.h"
-#include "blake3.cu"
+#include "fast.cu"
 #include "uv.h"
 #include "template.h"
 
