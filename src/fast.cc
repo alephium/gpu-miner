@@ -210,7 +210,32 @@
         H7 = V7 ^ VF; \
     } while (0)
 
-void blake3_hash(uint32_t *input, uint32_t *output)
+#define HASH_BLOCK(r, blen, flags) \
+    do                             \
+    {                              \
+        M0 = input[0x##r##0];      \
+        M1 = input[0x##r##1];      \
+        M2 = input[0x##r##2];      \
+        M3 = input[0x##r##3];      \
+        M4 = input[0x##r##4];      \
+        M5 = input[0x##r##5];      \
+        M6 = input[0x##r##6];      \
+        M7 = input[0x##r##7];      \
+        M8 = input[0x##r##8];      \
+        M9 = input[0x##r##9];      \
+        MA = input[0x##r##A];      \
+        MB = input[0x##r##B];      \
+        MC = input[0x##r##C];      \
+        MD = input[0x##r##D];      \
+        ME = input[0x##r##E];      \
+        MF = input[0x##r##F];      \
+        BLEN = (blen);             \
+        FLAGS = (flags);           \
+        COMPRESS;                  \
+    } while (0)
+
+// input.len == 326, i.e. 326 / 4 = 81.5 words, 326 / 64 = 5.09375 message blocks
+void blake3_double_hash(uint32_t *input, uint32_t *output)
 {
     uint32_t M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, MA, MB, MC, MD, ME, MF; // message block
     uint32_t V0, V1, V2, V3, V4, V5, V6, V7, V8, V9, VA, VB, VC, VD, VE, VF; // internal state
@@ -225,26 +250,7 @@ void blake3_hash(uint32_t *input, uint32_t *output)
     H5 = IV_5;
     H6 = IV_6;
     H7 = IV_7;
-    M0 = input[0];
-    M1 = input[1];
-    M2 = input[2];
-    M3 = input[3];
-    M4 = input[4];
-    M5 = input[5];
-    M6 = input[6];
-    M7 = input[7];
-    M8 = input[8];
-    M9 = input[9];
-    MA = input[10];
-    MB = input[11];
-    MC = input[12];
-    MD = input[13];
-    ME = input[14];
-    MF = input[15];
-    BLEN = 0;
-    FLAGS = CHUNK_START | CHUNK_END | ROOT;
-
-    COMPRESS;
+    HASH_BLOCK(0, 0, CHUNK_START | CHUNK_END | ROOT);
 
     output[0] = H0;
     output[1] = H1;
@@ -256,6 +262,27 @@ void blake3_hash(uint32_t *input, uint32_t *output)
     output[7] = H7;
 }
 
+// typedef struct
+// {
+//     uint8_t buf[BLAKE3_BUF_CAP];
+
+//     uint32_t cv[8];
+
+//     uint8_t hash[64]; // 64 bytes needed as hash will used as block words as well
+
+//     uint8_t target[32];
+//     uint32_t from_group;
+//     uint32_t to_group;
+
+//     uint32_t hash_count;
+//     int found_good_hash;
+// } blake3_hasher;
+
+// void blake3_hasher_mine(blake3_hasher *hasher)
+// {
+
+// }
+
 #include "messages.h"
 
 int main()
@@ -264,6 +291,6 @@ int main()
     uint32_t output[8];
 
     print_hex("input", (uint8_t *)input, 64);
-    blake3_hash(input, output);
+    blake3_double_hash(input, output);
     print_hex("output", (uint8_t *)output, 32);
 }
