@@ -161,7 +161,7 @@ INLINE __device__ uint32_t ROTR32(uint32_t w, uint32_t c)
 }
 
 #define G(a, b, c, d, x, y)    \
-    do                         \
+    if (1)                     \
     {                          \
         a = a + b + x;         \
         d = ROTR32(d ^ a, 16); \
@@ -171,14 +171,16 @@ INLINE __device__ uint32_t ROTR32(uint32_t w, uint32_t c)
         d = ROTR32(d ^ a, 8);  \
         c = c + d;             \
         b = ROTR32(b ^ c, 7);  \
-    } while (0)
+    }                          \
+    else                       \
+        ((void)0)
 
 #define Mx(r, i) Mx_(Z##r##i)
 #define Mx_(n) Mx__(n)
 #define Mx__(n) M##n
 
 #define ROUND(r)                               \
-    do                                         \
+    if (1)                                     \
     {                                          \
         G(V0, V4, V8, VC, Mx(r, 0), Mx(r, 1)); \
         G(V1, V5, V9, VD, Mx(r, 2), Mx(r, 3)); \
@@ -188,10 +190,12 @@ INLINE __device__ uint32_t ROTR32(uint32_t w, uint32_t c)
         G(V1, V6, VB, VC, Mx(r, A), Mx(r, B)); \
         G(V2, V7, V8, VD, Mx(r, C), Mx(r, D)); \
         G(V3, V4, V9, VE, Mx(r, E), Mx(r, F)); \
-    } while (0)
+    }                                          \
+    else                                       \
+        ((void)0)
 
 #define COMPRESS_PRE \
-    do               \
+    if (1)           \
     {                \
         V0 = H0;     \
         V1 = H1;     \
@@ -217,10 +221,12 @@ INLINE __device__ uint32_t ROTR32(uint32_t w, uint32_t c)
         ROUND(4);    \
         ROUND(5);    \
         ROUND(6);    \
-    } while (0)
+    }                \
+    else             \
+        ((void)0)
 
 #define COMPRESS      \
-    do                \
+    if (1)            \
     {                 \
         COMPRESS_PRE; \
         H0 = V0 ^ V8; \
@@ -231,10 +237,12 @@ INLINE __device__ uint32_t ROTR32(uint32_t w, uint32_t c)
         H5 = V5 ^ VD; \
         H6 = V6 ^ VE; \
         H7 = V7 ^ VF; \
-    } while (0)
+    }                 \
+    else              \
+        ((void)0)
 
 #define HASH_BLOCK(r, blen, flags) \
-    do                             \
+    if (1)                         \
     {                              \
         M0 = input##r##0;          \
         M1 = input##r##1;          \
@@ -255,7 +263,9 @@ INLINE __device__ uint32_t ROTR32(uint32_t w, uint32_t c)
         BLEN = (blen);             \
         FLAGS = (flags);           \
         COMPRESS;                  \
-    } while (0)
+    }                              \
+    else                           \
+        ((void)0)
 
 typedef struct
 {
@@ -271,55 +281,57 @@ typedef struct
     int found_good_hash;
 } blake3_hasher;
 
-#define DOUBLE_HASH                                  \
-    do                                               \
-    {                                                \
-        H1 = IV_1;                                   \
-        H0 = IV_0;                                   \
-        H2 = IV_2;                                   \
-        H3 = IV_3;                                   \
-        H4 = IV_4;                                   \
-        H5 = IV_5;                                   \
-        H6 = IV_6;                                   \
-        H7 = IV_7;                                   \
-        HASH_BLOCK(0, 64, CHUNK_START);              \
-        HASH_BLOCK(1, 64, 0);                        \
-        HASH_BLOCK(2, 64, 0);                        \
-        HASH_BLOCK(3, 64, 0);                        \
-        HASH_BLOCK(4, 64, 0);                        \
-        HASH_BLOCK(5, 6, CHUNK_END | ROOT);          \
-                                                     \
-        M0 = H0;                                     \
-        M1 = H1;                                     \
-        M2 = H2;                                     \
-        M3 = H3;                                     \
-        M4 = H4;                                     \
-        M5 = H5;                                     \
-        M6 = H6;                                     \
-        M7 = H7;                                     \
-        M8 = 0;                                      \
-        M9 = 0;                                      \
-        MA = 0;                                      \
-        MB = 0;                                      \
-        MC = 0;                                      \
-        MD = 0;                                      \
-        ME = 0;                                      \
-        MF = 0;                                      \
-        H0 = IV_0;                                   \
-        H1 = IV_1;                                   \
-        H2 = IV_2;                                   \
-        H3 = IV_3;                                   \
-        H4 = IV_4;                                   \
-        H5 = IV_5;                                   \
-        H6 = IV_6;                                   \
-        H7 = IV_7;                                   \
-        BLEN = 32;                                   \
-        FLAGS = CHUNK_START | CHUNK_END | ROOT;      \
-        COMPRESS;                                    \
-    } while (0)
+#define DOUBLE_HASH                             \
+    if (1)                                      \
+    {                                           \
+        H1 = IV_1;                              \
+        H0 = IV_0;                              \
+        H2 = IV_2;                              \
+        H3 = IV_3;                              \
+        H4 = IV_4;                              \
+        H5 = IV_5;                              \
+        H6 = IV_6;                              \
+        H7 = IV_7;                              \
+        HASH_BLOCK(0, 64, CHUNK_START);         \
+        HASH_BLOCK(1, 64, 0);                   \
+        HASH_BLOCK(2, 64, 0);                   \
+        HASH_BLOCK(3, 64, 0);                   \
+        HASH_BLOCK(4, 64, 0);                   \
+        HASH_BLOCK(5, 6, CHUNK_END | ROOT);     \
+                                                \
+        M0 = H0;                                \
+        M1 = H1;                                \
+        M2 = H2;                                \
+        M3 = H3;                                \
+        M4 = H4;                                \
+        M5 = H5;                                \
+        M6 = H6;                                \
+        M7 = H7;                                \
+        M8 = 0;                                 \
+        M9 = 0;                                 \
+        MA = 0;                                 \
+        MB = 0;                                 \
+        MC = 0;                                 \
+        MD = 0;                                 \
+        ME = 0;                                 \
+        MF = 0;                                 \
+        H0 = IV_0;                              \
+        H1 = IV_1;                              \
+        H2 = IV_2;                              \
+        H3 = IV_3;                              \
+        H4 = IV_4;                              \
+        H5 = IV_5;                              \
+        H6 = IV_6;                              \
+        H7 = IV_7;                              \
+        BLEN = 32;                              \
+        FLAGS = CHUNK_START | CHUNK_END | ROOT; \
+        COMPRESS;                               \
+    }                                           \
+    else                                        \
+        ((void)0)
 
 #define UPDATE_NONCE                                        \
-    do                                                      \
+    if (1)                                                  \
     {                                                       \
         if (atomicCAS(&hasher->found_good_hash, 0, 1) == 0) \
         {                                                   \
@@ -342,10 +354,12 @@ typedef struct
         }                                                   \
         atomicAdd(&hasher->hash_count, hash_count);         \
         return;                                             \
-    } while (0)
+    }                                                       \
+    else                                                    \
+        ((void)0)
 
 #define CHECK_INDEX                                                                         \
-    do                                                                                      \
+    if (1)                                                                                  \
     {                                                                                       \
         uint32_t big_index = (H7 & 0x0F000000) >> 24;                                       \
         if ((big_index / group_nums == from_group) && (big_index % group_nums == to_group)) \
@@ -356,14 +370,16 @@ typedef struct
         {                                                                                   \
             goto cnt;                                                                       \
         }                                                                                   \
-    } while (0)
+    }                                                                                       \
+    else                                                                                    \
+        ((void)0)
 
 #define MASK0(n) (n & 0x000000FF)
 #define MASK1(n) (n & 0x0000FF00)
 #define MASK2(n) (n & 0x00FF0000)
 #define MASK3(n) (n & 0xFF000000)
 #define CHECK_TARGET(m, n)       \
-    do                           \
+    if (1)                       \
     {                            \
         m0 = MASK##n(H##m);      \
         m1 = MASK##n(target##m); \
@@ -375,10 +391,12 @@ typedef struct
         {                        \
             CHECK_INDEX;         \
         }                        \
-    } while (0)
+    }                            \
+    else                         \
+        ((void)0)
 
 #define CHECK_POW           \
-    do                      \
+    if (1)                  \
     {                       \
         uint32_t m0, m1;    \
         CHECK_TARGET(0, 0); \
@@ -393,7 +411,9 @@ typedef struct
         CHECK_TARGET(2, 1); \
         CHECK_TARGET(2, 2); \
         CHECK_TARGET(2, 3); \
-    } while (0)
+    }                       \
+    else                    \
+        ((void)0)
 
 __global__ void blake3_hasher_mine(blake3_hasher *hasher)
 {
@@ -463,50 +483,54 @@ int main()
 #endif // BLAKE3_TEST
 
 // Beginning of GPU Architecture definitions
-inline int get_sm_cores(int major, int minor) {
-  // Defines for GPU Architecture types (using the SM version to determine
-  // the # of cores per SM
-  typedef struct {
-    int SM;  // 0xMm (hexidecimal notation), M = SM Major version,
-    // and m = SM minor version
-    int Cores;
-  } sSMtoCores;
+inline int get_sm_cores(int major, int minor)
+{
+    // Defines for GPU Architecture types (using the SM version to determine
+    // the # of cores per SM
+    typedef struct
+    {
+        int SM; // 0xMm (hexidecimal notation), M = SM Major version,
+        // and m = SM minor version
+        int Cores;
+    } sSMtoCores;
 
-  sSMtoCores nGpuArchCoresPerSM[] = {
-      {0x30, 192},
-      {0x32, 192},
-      {0x35, 192},
-      {0x37, 192},
-      {0x50, 128},
-      {0x52, 128},
-      {0x53, 128},
-      {0x60,  64},
-      {0x61, 128},
-      {0x62, 128},
-      {0x70,  64},
-      {0x72,  64},
-      {0x75,  64},
-      {0x80,  64},
-      {0x86, 128},
-      {-1, -1}};
+    sSMtoCores nGpuArchCoresPerSM[] = {
+        {0x30, 192},
+        {0x32, 192},
+        {0x35, 192},
+        {0x37, 192},
+        {0x50, 128},
+        {0x52, 128},
+        {0x53, 128},
+        {0x60, 64},
+        {0x61, 128},
+        {0x62, 128},
+        {0x70, 64},
+        {0x72, 64},
+        {0x75, 64},
+        {0x80, 64},
+        {0x86, 128},
+        {-1, -1}};
 
-  int index = 0;
+    int index = 0;
 
-  while (nGpuArchCoresPerSM[index].SM != -1) {
-    if (nGpuArchCoresPerSM[index].SM == ((major << 4) + minor)) {
-      return nGpuArchCoresPerSM[index].Cores;
+    while (nGpuArchCoresPerSM[index].SM != -1)
+    {
+        if (nGpuArchCoresPerSM[index].SM == ((major << 4) + minor))
+        {
+            return nGpuArchCoresPerSM[index].Cores;
+        }
+
+        index++;
     }
 
-    index++;
-  }
-
-  // If we don't find the values, we default use the previous one
-  // to run properly
-  printf(
-      "MapSMtoCores for SM %d.%d is undefined."
-      "  Default to use %d Cores/SM\n",
-      major, minor, nGpuArchCoresPerSM[index - 1].Cores);
-  return nGpuArchCoresPerSM[index - 1].Cores;
+    // If we don't find the values, we default use the previous one
+    // to run properly
+    printf(
+        "MapSMtoCores for SM %d.%d is undefined."
+        "  Default to use %d Cores/SM\n",
+        major, minor, nGpuArchCoresPerSM[index - 1].Cores);
+    return nGpuArchCoresPerSM[index - 1].Cores;
 }
 
 int get_device_cores(int device_id)
