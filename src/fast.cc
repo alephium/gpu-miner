@@ -249,6 +249,63 @@ typedef struct
     int found_good_hash;
 } blake3_hasher;
 
+#define DOUBLE_HASH                                  \
+    do                                               \
+    {                                                \
+        H1 = IV_1;                                   \
+        H0 = IV_0;                                   \
+        H2 = IV_2;                                   \
+        H3 = IV_3;                                   \
+        H4 = IV_4;                                   \
+        H5 = IV_5;                                   \
+        H6 = IV_6;                                   \
+        H7 = IV_7;                                   \
+        HASH_BLOCK(0, 64, CHUNK_START);              \
+        HASH_BLOCK(1, 64, 0);                        \
+        HASH_BLOCK(2, 64, 0);                        \
+        HASH_BLOCK(3, 64, 0);                        \
+        HASH_BLOCK(4, 64, 0);                        \
+        HASH_BLOCK(5, 6, CHUNK_END | ROOT);          \
+                                                     \
+        M0 = H0;                                     \
+        M1 = H1;                                     \
+        M2 = H2;                                     \
+        M3 = H3;                                     \
+        M4 = H4;                                     \
+        M5 = H5;                                     \
+        M6 = H6;                                     \
+        M7 = H7;                                     \
+        M8 = 0;                                      \
+        M9 = 0;                                      \
+        MA = 0;                                      \
+        MB = 0;                                      \
+        MC = 0;                                      \
+        MD = 0;                                      \
+        ME = 0;                                      \
+        MF = 0;                                      \
+        H0 = IV_0;                                   \
+        H1 = IV_1;                                   \
+        H2 = IV_2;                                   \
+        H3 = IV_3;                                   \
+        H4 = IV_4;                                   \
+        H5 = IV_5;                                   \
+        H6 = IV_6;                                   \
+        H7 = IV_7;                                   \
+        BLEN = 32;                                   \
+        FLAGS = CHUNK_START | CHUNK_END | ROOT;      \
+        COMPRESS;                                    \
+                                                     \
+        uint32_t *output = (uint32_t *)hasher->hash; \
+        output[0] = H0;                              \
+        output[1] = H1;                              \
+        output[2] = H2;                              \
+        output[3] = H3;                              \
+        output[4] = H4;                              \
+        output[5] = H5;                              \
+        output[6] = H6;                              \
+        output[7] = H7;                              \
+    } while (0)
+
 void blake3_hasher_mine(blake3_hasher *hasher)
 {
     uint32_t *input = (uint32_t *)hasher->buf;
@@ -264,48 +321,7 @@ void blake3_hasher_mine(blake3_hasher *hasher)
     uint32_t H0, H1, H2, H3, H4, H5, H6, H7;                                 // chain value
     uint32_t BLEN, FLAGS;                                                    // block len, flags
 
-    H0 = IV_0;
-    H1 = IV_1;
-    H2 = IV_2;
-    H3 = IV_3;
-    H4 = IV_4;
-    H5 = IV_5;
-    H6 = IV_6;
-    H7 = IV_7;
-    HASH_BLOCK(0, 64, CHUNK_START);
-    HASH_BLOCK(1, 64, 0);
-    HASH_BLOCK(2, 64, 0);
-    HASH_BLOCK(3, 64, 0);
-    HASH_BLOCK(4, 64, 0);
-    HASH_BLOCK(5, 6, CHUNK_END | ROOT);
-
-    M0 = H0;
-    M1 = H1;
-    M2 = H2;
-    M3 = H3;
-    M4 = H4;
-    M5 = H5;
-    M6 = H6;
-    M7 = H7;
-    M8 = 0;
-    M9 = 0;
-    MA = 0;
-    MB = 0;
-    MC = 0;
-    MD = 0;
-    ME = 0;
-    MF = 0;
-    H0 = IV_0;
-    H1 = IV_1;
-    H2 = IV_2;
-    H3 = IV_3;
-    H4 = IV_4;
-    H5 = IV_5;
-    H6 = IV_6;
-    H7 = IV_7;
-    BLEN = 32;
-    FLAGS = CHUNK_START | CHUNK_END | ROOT;
-    COMPRESS;
+    DOUBLE_HASH;
 
     uint32_t *output = (uint32_t *)hasher->hash;
     output[0] = H0;
