@@ -313,16 +313,6 @@ typedef struct
         BLEN = 32;                                   \
         FLAGS = CHUNK_START | CHUNK_END | ROOT;      \
         COMPRESS;                                    \
-                                                     \
-        uint32_t *output = (uint32_t *)hasher->hash; \
-        output[0] = H0;                              \
-        output[1] = H1;                              \
-        output[2] = H2;                              \
-        output[3] = H3;                              \
-        output[4] = H4;                              \
-        output[5] = H5;                              \
-        output[6] = H6;                              \
-        output[7] = H7;                              \
     } while (0)
 
 #define UPDATE_NONCE                                        \
@@ -421,11 +411,16 @@ __global__ void blake3_hasher_mine(blake3_hasher *hasher)
     uint32_t H0, H1, H2, H3, H4, H5, H6, H7;                                 // chain value
     uint32_t BLEN, FLAGS;                                                    // block len, flags
 
+    int stride = blockDim.x * gridDim.x;
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    uint32_t *short_nonce = &input00;
+    *short_nonce = (*short_nonce) / stride * stride + tid;
+
     while (hash_count < mining_steps)
     {
         hash_count += 1;
         // printf("count: %u\n", hash_count);
-        input00 += 1;
+        *short_nonce += stride;
         DOUBLE_HASH;
         CHECK_POW;
     cnt:;
@@ -433,11 +428,11 @@ __global__ void blake3_hasher_mine(blake3_hasher *hasher)
     atomicAdd(&hasher->hash_count, hash_count);
 }
 
-// #ifdef BLAKE3_TEST
+#ifdef BLAKE3_TEST
 int main()
 {
     blob_t target;
-    hex_to_bytes("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
+    hex_to_bytes("00009fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
 
     blake3_hasher *hasher;
     blake3_hasher *device_hasher;
@@ -452,7 +447,7 @@ int main()
     cudaStream_t stream;
     TRY(cudaStreamCreate(&stream));
     TRY(cudaMemcpyAsync(device_hasher, hasher, sizeof(blake3_hasher), cudaMemcpyHostToDevice, stream));
-    blake3_hasher_mine<<<1, 1, 0, stream>>>(device_hasher);
+    blake3_hasher_mine<<<32, 32, 0, stream>>>(device_hasher);
     TRY(cudaStreamSynchronize(stream));
 
     TRY(cudaMemcpy(hasher, device_hasher, sizeof(blake3_hasher), cudaMemcpyDeviceToHost));
@@ -462,4 +457,4 @@ int main()
     printf("count: %d\n", hasher->hash_count);
     printf("%s\n", hash_string1); // 0003119e5bf02115e1c8496008fbbcec4884e0be7f9dc372cd4316a51d065283
 }
-// #endif // BLAKE3_TEST
+#endif // BLAKE3_TEST
