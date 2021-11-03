@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "constants.h"
+#include "messages.h"
+
 #define BLAKE3_KEY_LEN 32
 #define BLAKE3_OUT_LEN 32
 #define BLAKE3_BLOCK_LEN 64
@@ -306,6 +309,73 @@ typedef struct
         output[7] = H7;                              \
     } while (0)
 
+#define UPDATE_NONCE                                 \
+    do                                               \
+    {                                                \
+        hasher->found_good_hash = 1;                 \
+        uint32_t *output = (uint32_t *)hasher->hash; \
+        output[0] = H0;                              \
+        output[1] = H1;                              \
+        output[2] = H2;                              \
+        output[3] = H3;                              \
+        output[4] = H4;                              \
+        output[5] = H5;                              \
+        output[6] = H6;                              \
+        output[7] = H7;                              \
+    } while (0)
+
+#define CHECK_INDEX                                                                         \
+    do                                                                                      \
+    {                                                                                       \
+        uint32_t big_index = (H7 & 0x0F000000) >> 24;                                       \
+        if ((big_index / group_nums == from_group) && (big_index % group_nums == to_group)) \
+        {                                                                                   \
+            UPDATE_NONCE;                                                                   \
+            goto end;                                                                       \
+        }                                                                                   \
+        else                                                                                \
+        {                                                                                   \
+            goto cnt;                                                                       \
+        }                                                                                   \
+    } while (0)
+
+#define MASK0(n) (n & 0x000000FF)
+#define MASK1(n) (n & 0x0000FF00)
+#define MASK2(n) (n & 0x00FF0000)
+#define MASK3(n) (n & 0xFF000000)
+#define CHECK_TARGET(m, n)                 \
+    do                                     \
+    {                                      \
+        m0 = MASK##n(H##m);                \
+        m1 = MASK##n(target##m);           \
+        if (m0 > m1)                       \
+        {                                  \
+            goto cnt;                      \
+        }                                  \
+        else if (m0 < m1)                  \
+        {                                  \
+            CHECK_INDEX;                   \
+        }                                  \
+    } while (0)
+
+#define CHECK_POW           \
+    do                      \
+    {                       \
+        uint32_t m0, m1;    \
+        CHECK_TARGET(0, 0); \
+        CHECK_TARGET(0, 1); \
+        CHECK_TARGET(0, 2); \
+        CHECK_TARGET(0, 3); \
+        CHECK_TARGET(1, 0); \
+        CHECK_TARGET(1, 1); \
+        CHECK_TARGET(1, 2); \
+        CHECK_TARGET(1, 3); \
+        CHECK_TARGET(2, 0); \
+        CHECK_TARGET(2, 1); \
+        CHECK_TARGET(2, 2); \
+        CHECK_TARGET(2, 3); \
+    } while (0)
+
 void blake3_hasher_mine(blake3_hasher *hasher)
 {
     uint32_t *input = (uint32_t *)hasher->buf;
@@ -315,31 +385,43 @@ void blake3_hasher_mine(blake3_hasher *hasher)
     uint32_t input30 = input[0x30], input31 = input[0x31], input32 = input[0x32], input33 = input[0x33], input34 = input[0x34], input35 = input[0x35], input36 = input[0x36], input37 = input[0x37], input38 = input[0x38], input39 = input[0x39], input3A = input[0x3A], input3B = input[0x3B], input3C = input[0x3C], input3D = input[0x3D], input3E = input[0x3E], input3F = input[0x3F];
     uint32_t input40 = input[0x40], input41 = input[0x41], input42 = input[0x42], input43 = input[0x43], input44 = input[0x44], input45 = input[0x45], input46 = input[0x46], input47 = input[0x47], input48 = input[0x48], input49 = input[0x49], input4A = input[0x4A], input4B = input[0x4B], input4C = input[0x4C], input4D = input[0x4D], input4E = input[0x4E], input4F = input[0x4F];
     uint32_t input50 = input[0x50], input51 = input[0x51], input52 = input[0x52], input53 = input[0x53], input54 = input[0x54], input55 = input[0x55], input56 = input[0x56], input57 = input[0x57], input58 = input[0x58], input59 = input[0x59], input5A = input[0x5A], input5B = input[0x5B], input5C = input[0x5C], input5D = input[0x5D], input5E = input[0x5E], input5F = input[0x5F];
+    uint32_t *target = (uint32_t *)hasher->target;
+    uint32_t target0 = target[0], target1 = target[1], target2 = target[2], target3 = target[3], target4 = target[4], target5 = target[5], target6 = target[6], target7 = target[7];
+    uint32_t from_group = hasher->from_group, to_group = hasher->to_group;
+    uint32_t hash_count = 0;
+
+    print_hex("target", (uint8_t *)target, 32);
+    printf("target: %u, %u\n", target0, target1);
 
     uint32_t M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, MA, MB, MC, MD, ME, MF; // message block
     uint32_t V0, V1, V2, V3, V4, V5, V6, V7, V8, V9, VA, VB, VC, VD, VE, VF; // internal state
     uint32_t H0, H1, H2, H3, H4, H5, H6, H7;                                 // chain value
     uint32_t BLEN, FLAGS;                                                    // block len, flags
 
-    DOUBLE_HASH;
+    while (hash_count < mining_steps)
+    {
+        printf("count: %u\n", hash_count);
+        hash_count += 1;
+        input00 += 1;
+        DOUBLE_HASH;
+        CHECK_POW;
+    cnt:;
+    }
 
-    uint32_t *output = (uint32_t *)hasher->hash;
-    output[0] = H0;
-    output[1] = H1;
-    output[2] = H2;
-    output[3] = H3;
-    output[4] = H4;
-    output[5] = H5;
-    output[6] = H6;
-    output[7] = H7;
+end:
+    hasher->hash_count += hash_count;
 }
-
-#include "messages.h"
 
 int main()
 {
+    blob_t target;
+    hex_to_bytes("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", &target);
+
     blake3_hasher *hasher = (blake3_hasher *)malloc(sizeof(blake3_hasher));
     bzero(hasher->buf, BLAKE3_BUF_CAP);
+    memcpy(hasher->target, target.blob, target.len);
+    hasher->from_group = 0;
+    hasher->to_group = 3;
 
     print_hex("input", (uint8_t *)hasher->buf, 384);
     blake3_hasher_mine(hasher);
