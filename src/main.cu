@@ -27,6 +27,8 @@ time_point_t start_time = Time::now();
 
 std::atomic<int> gpu_count;
 std::atomic<int> worker_count;
+std::atomic<uint64_t> total_mining_count;
+std::atomic<uint64_t> device_mining_count[max_gpu_num];
 
 void setup_gpu_worker_count(int _gpu_count, int _worker_count)
 {
@@ -123,6 +125,8 @@ void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data)
     uint32_t chain_index = job->from_group * group_nums + job->to_group;
     mining_counts[chain_index].fetch_sub(mining_steps);
     mining_counts[chain_index].fetch_add(worker->hasher->hash_count);
+    total_mining_count.fetch_add(worker->hasher->hash_count);
+    device_mining_count[worker->device_id].fetch_add(worker->hasher->hash_count);
 
     free_template(template_ptr);
     worker->async.data = worker;
@@ -196,13 +200,13 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 {
     time_point_t current_time = Time::now();
     if (current_time > start_time) {
-
-        uint64_t total_hash = 0;
-        for (int i = 0; i < chain_nums; i++) {
-            total_hash += mining_counts[i].load();
-        }
         duration_t eplased = current_time - start_time;
-        printf("hashrate: %f (hash/sec)\n", total_hash / eplased.count());
+        printf("hashrate: %.0f MH/s ", total_mining_count.load() / eplased.count() / 1000000);
+        for (int i = 0; i < gpu_count; i++)
+        {
+            printf("gpu%d: %.0f MH/s ", i, device_mining_count[i].load() / eplased.count() / 1000000);
+        }
+        printf("\n");
     }
 
     if (nread < 0) {
@@ -219,7 +223,6 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
         return;
     }
 
-    printf("message type: %d\n", message->kind);
     switch (message->kind)
     {
     case JOBS:
