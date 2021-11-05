@@ -38,12 +38,11 @@ void setup_gpu_worker_count(int _gpu_count, int _worker_count)
 
 void on_write_end(uv_write_t *req, int status)
 {
-    if (status == -1) {
-        fprintf(stderr, "error on_write_end");
+    if (status < 0) {
+        fprintf(stderr, "error on_write_end %d", status);
         exit(1);
     }
     free(req);
-    printf("sent new block\n");
 }
 
 std::mutex write_mutex;
@@ -64,7 +63,6 @@ void submit_new_block(mining_worker_t *worker)
     uv_write_t *write_req = (uv_write_t *)malloc(sizeof(uv_write_t));
     uint32_t buf_count = 1;
 
-    printf("sending new block\n");
     uv_write(write_req, tcp, &buf, buf_count, on_write_end);
 }
 
@@ -167,6 +165,20 @@ void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
     buf->len = suggested_size;
 }
 
+void log_hashrate(uv_timer_t *timer)
+{
+    time_point_t current_time = Time::now();
+    if (current_time > start_time) {
+        duration_t eplased = current_time - start_time;
+        printf("hashrate: %.0f MH/s ", total_mining_count.load() / eplased.count() / 1000000);
+        for (int i = 0; i < gpu_count; i++)
+        {
+            printf("gpu%d: %.0f MH/s ", i, device_mining_count[i].load() / eplased.count() / 1000000);
+        }
+        printf("\n");
+    }
+}
+
 uint8_t read_buf[2048 * 1024 * chain_nums];
 blob_t read_blob = { read_buf, 0 };
 server_message_t *decode_buf(const uv_buf_t *buf, ssize_t nread)
@@ -198,17 +210,6 @@ server_message_t *decode_buf(const uv_buf_t *buf, ssize_t nread)
 
 void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 {
-    time_point_t current_time = Time::now();
-    if (current_time > start_time) {
-        duration_t eplased = current_time - start_time;
-        printf("hashrate: %.0f MH/s ", total_mining_count.load() / eplased.count() / 1000000);
-        for (int i = 0; i < gpu_count; i++)
-        {
-            printf("gpu%d: %.0f MH/s ", i, device_mining_count[i].load() / eplased.count() / 1000000);
-        }
-        printf("\n");
-    }
-
     if (nread < 0) {
         fprintf(stderr, "error on_read %ld\n", nread);
         exit(1);
@@ -311,17 +312,20 @@ int main(int argc, char **argv)
 
     uv_tcp_t* socket = (uv_tcp_t *)malloc(sizeof(uv_tcp_t));
     uv_tcp_init(loop, socket);
-
     uv_connect_t* connect = (uv_connect_t *)malloc(sizeof(uv_connect_t));
-
     struct sockaddr_in dest;
     uv_ip4_addr(broker_ip, 10973, &dest);
-
     uv_tcp_connect(connect, socket, (const struct sockaddr*)&dest, on_connect);
+
     for (int i = 0; i < worker_count; i++) {
         uv_async_init(loop, &(mining_workers[i].async), mine_with_async);
         uv_timer_init(loop, &(mining_workers[i].timer));
     }
+
+    uv_timer_t log_timer;
+    uv_timer_init(loop, &log_timer);
+    uv_timer_start(&log_timer, log_hashrate, 5000, 5000);
+
     uv_run(loop, UV_RUN_DEFAULT);
 
     return (0);
