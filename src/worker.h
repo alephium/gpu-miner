@@ -31,6 +31,7 @@ typedef struct mining_worker_t {
     std::mt19937 random_gen;
 
     uv_async_t async;
+    uv_timer_t timer;
 } mining_worker_t;
 
 void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)

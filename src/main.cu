@@ -66,14 +66,17 @@ void submit_new_block(mining_worker_t *worker)
     uv_write(write_req, tcp, &buf, buf_count, on_write_end);
 }
 
+void mine_with_timer(uv_timer_t *timer);
+
 void mine(mining_worker_t *worker)
 {
     time_point_t start = Time::now();
 
     int32_t to_mine_index = next_chain_to_mine();
     if (to_mine_index == -1) {
-        printf("No task available, quitting...\n");
-        exit(1);
+        printf("waiting for new tasks\n");
+        worker->timer.data = worker;
+        uv_timer_start(&worker->timer, mine_with_timer, 500, 0);
     }
 
     mining_counts[to_mine_index].fetch_add(mining_steps);
@@ -94,6 +97,12 @@ void mine_with_req(uv_work_t *req)
 void mine_with_async(uv_async_t *handle)
 {
     mining_worker_t *worker = (mining_worker_t *)handle->data;
+    mine(worker);
+}
+
+void mine_with_timer(uv_timer_t *timer)
+{
+    mining_worker_t *worker = (mining_worker_t *)timer->data;
     mine(worker);
 }
 
@@ -308,6 +317,7 @@ int main(int argc, char **argv)
     uv_tcp_connect(connect, socket, (const struct sockaddr*)&dest, on_connect);
     for (int i = 0; i < worker_count; i++) {
         uv_async_init(loop, &(mining_workers[i].async), mine_with_async);
+        uv_timer_init(loop, &(mining_workers[i].timer));
     }
     uv_run(loop, UV_RUN_DEFAULT);
 
