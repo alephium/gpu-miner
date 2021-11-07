@@ -211,7 +211,7 @@ server_message_t *decode_buf(const uv_buf_t *buf, ssize_t nread)
 void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 {
     if (nread < 0) {
-        fprintf(stderr, "error on_read %ld\n", nread);
+        fprintf(stderr, "error on_read %ld: might be that the full node is not synced\n", nread);
         exit(1);
     }
 
@@ -246,7 +246,7 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 void on_connect(uv_connect_t *req, int status)
 {
     if (status == -1) {
-        fprintf(stderr, "connection error");
+        fprintf(stderr, "connection error: might be that the full node is reachable");
         return;
     }
     printf("the server is connected %d %p\n", status, req);
