@@ -211,7 +211,7 @@ server_message_t *decode_buf(const uv_buf_t *buf, ssize_t nread)
 void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 {
     if (nread < 0) {
-        fprintf(stderr, "error on_read %ld: might be that the full node is not synced\n", nread);
+        fprintf(stderr, "error on_read %ld: might be that the full node is not synced, or miner wallets are not setup\n", nread);
         exit(1);
     }
 
@@ -245,9 +245,9 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 
 void on_connect(uv_connect_t *req, int status)
 {
-    if (status == -1) {
-        fprintf(stderr, "connection error: might be that the full node is reachable");
-        return;
+    if (status < 0) {
+        fprintf(stderr, "connection error %d: might be that the full node is reachable\n", status);
+        exit(1);
     }
     printf("the server is connected %d %p\n", status, req);
 
@@ -306,7 +306,7 @@ int main(int argc, char **argv)
       strcpy(broker_ip, "127.0.0.1");
     }
 
-    printf("Will connect to broker @%s:10973\n", broker_ip);
+    printf("will connect to broker @%s:10973\n", broker_ip);
 
     loop = uv_default_loop();
 
