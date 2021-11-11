@@ -4,30 +4,12 @@ CUDA capable PoW miner for Alephium.
 
 Please make sure that you have installed Nvidia driver for you GPU. You could verify that by running the `nvidia-smi` command.
 
-## Usage
+### Ubuntu miner from source code
 
-### Ubuntu
+1. Build the miner by running `curl -L https://github.com/alephium/gpu-miner/raw/master/get-miner.sh | sh`
+2. Run `gpu-miner/run-miner.sh` to start the miner
 
-1. Install libuv and cuda toolkit. On Ubuntu, you could install them as follows:
-
-    ``` sh
-    sudo apt install libuv1-dev
-    sudo apt install nvidia-cuda-toolkit
-    ```
-
-2. Run `make gpu` to build the executable miner. The output will be `bin/gpu-miner`
-3. Run `bin/gpu-miner` and make sure that your full node is running
-
-If you want to restart you miner automatically in case it crashes, please run the miner with the following command:
-
-``` sh
-until bin/gpu-miner; do
-    echo "Miner crashed with exit code $?.  Respawning.." >&2
-    sleep 1
-done
-```
-
-### Windows
+### Windows miner from source code
 
 1. Install Visual Studio Build Tools, Recommend [VS 2019](https://visualstudio.microsoft.com/vs/older-downloads/#visual-studio-2019-and-other-products)
 2. Download [CUDA Toolkits](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64)
@@ -47,3 +29,7 @@ done
 Executable file will be generated in `your-gpu-miner-dir/bin/` directory.
 
 If you have any questions, please reach out to us on Discord.
+
+### Pre-built miner
+
+You could also download and run the pre-built miner from [Github release page](https://github.com/alephium/gpu-miner/releases/tag/0.3.0). Note that your anti-virus might warn about the pre-built miner.
