@@ -35,17 +35,13 @@ done
    1. Clone gpu-miner to local
 
    ``` sh
-   git clone git@github.com:alephium/gpu-miner.git
-   cd gpu-miner
-   git checkout build-on-windows
-   git submodule update --init --recursive
+   git clone --recurse-submodules git@github.com:alephium/gpu-miner.git
    ```
-   2. Open **x64** Native Tools Command Prompt
-   3. Execute:
-   
+   2. Open **x64** Native Tools Command Prompt and execute:
+
    ```sh
    cd your-gpu-miner-dir
-   powershell ./build.ps1
+   make windows-gpu
    ```
 
 Executable file will be generated in `your-gpu-miner-dir/bin/` directory.
