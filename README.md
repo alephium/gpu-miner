@@ -6,7 +6,7 @@ Please make sure that you have installed Nvidia driver for you GPU. You could ve
 
 ### Ubuntu miner from source code
 
-1. Build the miner by running `curl -L https://github.com/alephium/gpu-miner/raw/master/get-miner.sh | sh`
+1. Build the miner by running `curl -L https://github.com/alephium/gpu-miner/raw/master/get-miner.sh | bash`
 2. Run `gpu-miner/run-miner.sh` to start the miner
 
 ### Windows miner from source code

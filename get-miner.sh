@@ -17,4 +17,4 @@ git clone https://github.com/alephium/gpu-miner.git
 echo "Building the gpu miner"
 cd gpu-miner && make linux-gpu
 
-echo "Your miner is built, you could find it at gpu-miner/bin/gpu-miner"
+echo "Your miner is built, you could run it with: gpu-miner/run-miner.sh"
