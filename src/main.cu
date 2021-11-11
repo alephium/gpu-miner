@@ -15,6 +15,7 @@
 #include "worker.h"
 #include "template.h"
 #include "mining.h"
+#include "getopt.h"
 
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::duration<double> duration_t;
@@ -29,6 +30,7 @@ std::atomic<int> gpu_count;
 std::atomic<int> worker_count;
 std::atomic<uint64_t> total_mining_count;
 std::atomic<uint64_t> device_mining_count[max_gpu_num];
+bool use_device[max_gpu_num];
 
 void setup_gpu_worker_count(int _gpu_count, int _worker_count)
 {
@@ -38,7 +40,8 @@ void setup_gpu_worker_count(int _gpu_count, int _worker_count)
 
 void on_write_end(uv_write_t *req, int status)
 {
-    if (status < 0) {
+    if (status < 0)
+    {
         fprintf(stderr, "error on_write_end %d", status);
         exit(1);
     }
@@ -49,7 +52,8 @@ std::mutex write_mutex;
 uint8_t write_buffer[4096 * 1024];
 void submit_new_block(mining_worker_t *worker)
 {
-    if (!expire_template_for_new_block(load_worker__template(worker))) {
+    if (!expire_template_for_new_block(load_worker__template(worker)))
+    {
         printf("mined a parallel block, will not submit\n");
         return;
     }
@@ -73,7 +77,8 @@ void mine(mining_worker_t *worker)
     time_point_t start = Time::now();
 
     int32_t to_mine_index = next_chain_to_mine();
-    if (to_mine_index == -1) {
+    if (to_mine_index == -1)
+    {
         printf("waiting for new tasks\n");
         worker->timer.data = worker;
         uv_timer_start(&worker->timer, mine_with_timer, 500, 0);
@@ -111,9 +116,11 @@ void after_mine(uv_work_t *req, int status)
     return;
 }
 
-void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data) {
+void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data)
+{
     mining_worker_t *worker = (mining_worker_t *)data;
-    if (worker->hasher->found_good_hash) {
+    if (worker->hasher->found_good_hash)
+    {
         store_worker_found_good_hash(worker, true);
         submit_new_block(worker);
     }
@@ -137,29 +144,37 @@ void start_mining()
 
     start_time = Time::now();
 
-    for (uint32_t i = 0; i < worker_count.load(); i++) {
-        uv_queue_work(loop, &req[i], mine_with_req, after_mine);
+    for (uint32_t i = 0; i < worker_count.load(); i++)
+    {
+        if (use_device[mining_workers[i].device_id])
+        {
+            uv_queue_work(loop, &req[i], mine_with_req, after_mine);
+        }
     }
 }
 
 void start_mining_if_needed()
 {
-    if (!mining_templates_initialized) {
+    if (!mining_templates_initialized)
+    {
         bool all_initialized = true;
-        for (int i = 0; i < chain_nums; i++) {
-            if (load_template(i) == NULL) {
+        for (int i = 0; i < chain_nums; i++)
+        {
+            if (load_template(i) == NULL)
+            {
                 all_initialized = false;
                 break;
             }
         }
-        if (all_initialized) {
+        if (all_initialized)
+        {
             mining_templates_initialized = true;
             start_mining();
         }
     }
 }
 
-void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
+void alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 {
     buf->base = (char *)malloc(suggested_size);
     buf->len = suggested_size;
@@ -168,7 +183,8 @@ void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 void log_hashrate(uv_timer_t *timer)
 {
     time_point_t current_time = Time::now();
-    if (current_time > start_time) {
+    if (current_time > start_time)
+    {
         duration_t eplased = current_time - start_time;
         printf("hashrate: %.0f MH/s ", total_mining_count.load() / eplased.count() / 1000000);
         for (int i = 0; i < gpu_count; i++)
@@ -180,27 +196,34 @@ void log_hashrate(uv_timer_t *timer)
 }
 
 uint8_t read_buf[2048 * 1024 * chain_nums];
-blob_t read_blob = { read_buf, 0 };
+blob_t read_blob = {read_buf, 0};
 server_message_t *decode_buf(const uv_buf_t *buf, ssize_t nread)
 {
-    if (read_blob.len == 0) {
+    if (read_blob.len == 0)
+    {
         read_blob.blob = (uint8_t *)buf->base;
         read_blob.len = nread;
         server_message_t *message = decode_server_message(&read_blob);
-        if (message) {
+        if (message)
+        {
             // some bytes left
-            if (read_blob.len > 0) {
+            if (read_blob.len > 0)
+            {
                 memcpy(read_buf, read_blob.blob, read_blob.len);
                 read_blob.blob = read_buf;
             }
             return message;
-        } else { // no bytes consumed
+        }
+        else
+        { // no bytes consumed
             memcpy(read_buf, buf->base, nread);
             read_blob.blob = read_buf;
             read_blob.len = nread;
             return NULL;
         }
-    } else {
+    }
+    else
+    {
         assert(read_blob.blob == read_buf);
         memcpy(read_buf + read_blob.len, buf->base, nread);
         read_blob.len += nread;
@@ -210,24 +233,28 @@ server_message_t *decode_buf(const uv_buf_t *buf, ssize_t nread)
 
 void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 {
-    if (nread < 0) {
+    if (nread < 0)
+    {
         fprintf(stderr, "error on_read %ld: might be that the full node is not synced, or miner wallets are not setup\n", nread);
         exit(1);
     }
 
-    if (nread == 0) {
+    if (nread == 0)
+    {
         return;
     }
 
     server_message_t *message = decode_buf(buf, nread);
-    if (!message) {
+    if (!message)
+    {
         return;
     }
 
     switch (message->kind)
     {
     case JOBS:
-        for (int i = 0; i < message->jobs->len; i ++) {
+        for (int i = 0; i < message->jobs->len; i++)
+        {
             update_templates(message->jobs->jobs[i]);
         }
         start_mining_if_needed();
@@ -245,7 +272,8 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 
 void on_connect(uv_connect_t *req, int status)
 {
-    if (status < 0) {
+    if (status < 0)
+    {
         fprintf(stderr, "connection error %d: might be that the full node is reachable\n", status);
         exit(1);
     }
@@ -270,12 +298,13 @@ int hostname_to_ip(char *ip_address, char *hostname)
     hints.ai_socktype = SOCK_STREAM;
 
     int res = getaddrinfo(hostname, NULL, &hints, &servinfo);
-    if (res != 0) {
-      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(res));
-      return 1;
+    if (res != 0)
+    {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(res));
+        return 1;
     }
 
-    struct sockaddr_in *h = (struct sockaddr_in *) servinfo->ai_addr;
+    struct sockaddr_in *h = (struct sockaddr_in *)servinfo->ai_addr;
     strcpy(ip_address, inet_ntoa(h->sin_addr));
 
     freeaddrinfo(servinfo);
@@ -287,37 +316,68 @@ int main(int argc, char **argv)
     int gpu_count;
     cudaGetDeviceCount(&gpu_count);
     printf("GPU count: %d\n", gpu_count);
-    for (int i = 0; i < gpu_count; i++) {
+    for (int i = 0; i < gpu_count; i++)
+    {
         printf("GPU #%d has #%d cores\n", i, get_device_cores(i));
+        use_device[i] = true;
     }
     mining_workers_init(gpu_count);
     setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);
 
     char broker_ip[16];
-    memset(broker_ip, '\0', sizeof(broker_ip));
+    strcpy(broker_ip, "127.0.0.1");
 
-    if (argc >= 2) {
-      if (is_valid_ip_address(argv[1])) {
-        strcpy(broker_ip, argv[1]);
-      } else {
-        hostname_to_ip(broker_ip, argv[1]);
-      }
-    } else {
-      strcpy(broker_ip, "127.0.0.1");
+    int command;
+    while ((command = getopt(argc, argv, "g:a:")) != -1)
+    {
+        switch (command)
+        {
+        case 'a':
+            if (is_valid_ip_address(optarg))
+            {
+                strcpy(broker_ip, optarg);
+            }
+            else
+            {
+                hostname_to_ip(broker_ip, argv[optind]);
+            }
+            printf("will connect to broker @%s:10973\n", broker_ip);
+            break;
+
+        case 'g':
+            for (int i = 0; i < gpu_count; i++)
+            {
+                use_device[i] = false;
+            }
+            optind--;
+            for (; optind < argc && *argv[optind] != '-'; optind++)
+            {
+                int device = atoi(argv[optind]);
+                if (device < 0 || device >= gpu_count) {
+                    printf("Invalid gpu index %d\n", device);
+                    exit(1);
+                }
+                use_device[device] = true;
+            }
+            break;
+
+        default:
+            printf("Invalid command %c\n", command);
+            exit(1);
+        }
     }
-
-    printf("will connect to broker @%s:10973\n", broker_ip);
 
     loop = uv_default_loop();
 
-    uv_tcp_t* socket = (uv_tcp_t *)malloc(sizeof(uv_tcp_t));
+    uv_tcp_t *socket = (uv_tcp_t *)malloc(sizeof(uv_tcp_t));
     uv_tcp_init(loop, socket);
-    uv_connect_t* connect = (uv_connect_t *)malloc(sizeof(uv_connect_t));
+    uv_connect_t *connect = (uv_connect_t *)malloc(sizeof(uv_connect_t));
     struct sockaddr_in dest;
     uv_ip4_addr(broker_ip, 10973, &dest);
-    uv_tcp_connect(connect, socket, (const struct sockaddr*)&dest, on_connect);
+    uv_tcp_connect(connect, socket, (const struct sockaddr *)&dest, on_connect);
 
-    for (int i = 0; i < worker_count; i++) {
+    for (int i = 0; i < worker_count; i++)
+    {
         uv_async_init(loop, &(mining_workers[i].async), mine_with_async);
         uv_timer_init(loop, &(mining_workers[i].timer));
     }

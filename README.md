@@ -9,6 +9,8 @@ Please make sure that you have installed Nvidia driver for you GPU. You could ve
 1. Build the miner by running `curl -L https://github.com/alephium/gpu-miner/raw/master/get-miner.sh | bash`
 2. Run `gpu-miner/run-miner.sh` to start the miner
 
+You could specify the miner api with `-a broker` parameters and GPU indexes with `-g 1 2`.
+
 ### Windows miner from source code
 
 1. Install Visual Studio Build Tools, Recommend [VS 2019](https://visualstudio.microsoft.com/vs/older-downloads/#visual-studio-2019-and-other-products)
