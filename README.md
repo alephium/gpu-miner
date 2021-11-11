@@ -6,6 +6,8 @@ Please make sure that you have installed Nvidia driver for you GPU. You could ve
 
 ## Usage
 
+### Ubuntu
+
 1. Install libuv and cuda toolkit. On Ubuntu, you could install them as follows:
 
     ``` sh
@@ -24,5 +26,28 @@ until bin/gpu-miner; do
     sleep 1
 done
 ```
+
+### Windows
+
+1. Install Visual Studio Build Tools, Recommend [VS 2019](https://visualstudio.microsoft.com/vs/older-downloads/#visual-studio-2019-and-other-products)
+2. Download [CUDA Toolkits](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64)
+3. Build gpu-miner:
+   1. Clone gpu-miner to local
+
+   ``` sh
+   git clone git@github.com:alephium/gpu-miner.git
+   cd gpu-miner
+   git checkout build-on-windows
+   git submodule update --init --recursive
+   ```
+   2. Open **x64** Native Tools Command Prompt
+   3. Execute:
+   
+   ```sh
+   cd your-gpu-miner-dir
+   powershell ./build.ps1
+   ```
+
+Executable file will be generated in `your-gpu-miner-dir/bin/` directory.
 
 If you have any questions, please reach out to us on Discord.
