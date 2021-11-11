@@ -22,7 +22,7 @@ char *bytes_to_hex(uint8_t *bytes, ssize_t len)
 {
     ssize_t hex_len = 2 * len + 1;
     char *hex_string = (char *)malloc(hex_len);
-    bzero(hex_string, hex_len);
+    memset(hex_string, 0, hex_len);
 
     uint8_t *byte_cursor = bytes;
     char *hex_cursor = hex_string;
@@ -62,7 +62,7 @@ void hex_to_bytes(const char *hex_data, blob_t *buf)
 
     buf->len = hex_len / 2;
     buf->blob = (uint8_t *)malloc(buf->len);
-    bzero(buf->blob, buf->len);
+    memset(buf->blob, 0, buf->len);
 
     for (size_t pos = 0; pos < hex_len; pos += 2) {
         char left = hex_to_byte(hex_data[pos]);

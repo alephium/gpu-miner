@@ -46,8 +46,8 @@ void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
 
     TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
     TRY( cudaMalloc(&(self->device_hasher), sizeof(blake3_hasher)) );
-    bzero(self->hasher->buf, BLAKE3_BUF_CAP);
-    bzero(self->hasher->hash, 64);
+    memset(self->hasher->buf, 0, BLAKE3_BUF_CAP);
+    memset(self->hasher->hash, 0, 64);
 
     self->random_gen.seed(self->id);
 }
@@ -87,7 +87,7 @@ void reset_worker(mining_worker_t *worker)
     assert((24 + job->header_blob.len + 63) / 64 * 64 == BLAKE3_BUF_CAP);
 
     size_t target_zero_len = 32 - job->target.len;
-    bzero(hasher->target, target_zero_len);
+    memset(hasher->target, 0, target_zero_len);
     memcpy(hasher->target + target_zero_len, job->target.blob, job->target.len);
 
     hasher->from_group = job->from_group;

@@ -1,4 +1,7 @@
-gpu:
+windows-gpu:
+	@powershell ./build.ps1
+
+linux-gpu:
 	@nvcc --std c++11 -O3 --ptxas-options -v --x cu src/main.cu -luv -o bin/gpu-miner
 
 blake3-test:
