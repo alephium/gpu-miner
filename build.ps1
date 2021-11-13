@@ -2,7 +2,7 @@ $rootPath = Get-Location
 $libuvPath = Join-Path $rootPath "libuv"
 Set-Location $libuvPath
 Remove-Item -Recurse -Force $libuvPath/build -ErrorAction Ignore
-New-Item -Path $libuvPath -Name "build" -ItemType "directory"
+New-Item -Path $libuvPath -Name "build" -ItemType "directory" | Out-Null
 
 # build libuv
 $buildPath = Join-Path $libuvPath "build"
