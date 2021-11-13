@@ -14,7 +14,7 @@ You could specify the miner api with `-a broker` parameters and GPU indexes with
 ### Windows miner from source code
 
 1. Install Visual Studio Build Tools, Recommend [VS 2019](https://visualstudio.microsoft.com/vs/older-downloads/#visual-studio-2019-and-other-products)
-2. Download [CUDA Toolkits](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64)
+2. Install [CUDA Toolkits](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64)
 3. Build gpu-miner:
    1. Clone gpu-miner to local
 
@@ -25,7 +25,7 @@ You could specify the miner api with `-a broker` parameters and GPU indexes with
 
    ```sh
    cd your-gpu-miner-dir
-   make windows-gpu
+   make gpu
    ```
 
 Executable file will be generated in `your-gpu-miner-dir/bin/` directory.
