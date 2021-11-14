@@ -313,6 +313,17 @@ int hostname_to_ip(char *ip_address, char *hostname)
 
 int main(int argc, char **argv)
 {
+    #ifdef _WIN32
+    WSADATA wsa;
+    // current winsocket version is 2.2
+    int rc = WSAStartup(MAKEWORD(2, 2), &wsa);
+    if (rc != 0)
+    {
+        printf("Initialize winsock failed: %d", rc);
+	exit(1);
+    }
+    #endif
+
     int gpu_count;
     cudaGetDeviceCount(&gpu_count);
     printf("GPU count: %d\n", gpu_count);
