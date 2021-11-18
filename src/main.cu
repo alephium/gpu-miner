@@ -82,15 +82,15 @@ void mine(mining_worker_t *worker)
         printf("waiting for new tasks\n");
         worker->timer.data = worker;
         uv_timer_start(&worker->timer, mine_with_timer, 500, 0);
+    } else {
+        mining_counts[to_mine_index].fetch_add(mining_steps);
+        setup_template(worker, load_template(to_mine_index));
+
+        start_worker_mining(worker);
+
+        duration_t elapsed = Time::now() - start;
+        // printf("=== mining time: %fs\n", elapsed.count());
     }
-
-    mining_counts[to_mine_index].fetch_add(mining_steps);
-    setup_template(worker, load_template(to_mine_index));
-
-    start_worker_mining(worker);
-
-    duration_t elapsed = Time::now() - start;
-    // printf("=== mining time: %fs\n", elapsed.count());
 }
 
 void mine_with_req(uv_work_t *req)
