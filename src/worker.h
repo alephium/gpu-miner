@@ -49,7 +49,7 @@ void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
     memset(self->hasher->buf, 0, BLAKE3_BUF_CAP);
     memset(self->hasher->hash, 0, 64);
 
-    self->random_gen.seed(self->id);
+    self->random_gen.seed(self->id + (uint64_t)self + (uint64_t)self->hasher + rand());
 }
 
 bool load_worker__found_good_hash(mining_worker_t *worker)
