@@ -66,6 +66,7 @@ void mining_worker_init(mining_worker_t *self, cl_uint platform_index, cl_platfo
 
     // TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
     // TRY( cudaMalloc(&(self->device_hasher), sizeof(blake3_hasher)) );
+    self->hasher = (blake3_hasher *)malloc(sizeof(blake3_hasher));
     memset(self->hasher->buf, 0, BLAKE3_BUF_CAP);
     memset(self->hasher->hash, 0, 64);
 

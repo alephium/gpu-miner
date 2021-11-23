@@ -324,11 +324,13 @@ int main(int argc, char **argv)
     cl_uint platform_count;
     TRY(clGetPlatformIDs(0, NULL, &platform_count));
     cl_platform_id *platforms = (cl_platform_id *)malloc(platform_count * sizeof(cl_platform_id));
+    TRY(clGetPlatformIDs(platform_count, platforms, NULL));
     for (cl_uint i = 0; i < platform_count; i++)
     {
         cl_uint device_count;
         TRY(clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &device_count));
         cl_device_id *devices = (cl_device_id *)malloc(device_count * sizeof(cl_device_id));
+        TRY(clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, device_count, devices, NULL));
         for (cl_uint j = 0; j < device_count; j++)
         {
             mining_workers_init(i, platforms[i], j, devices[j]);
