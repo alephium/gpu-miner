@@ -143,6 +143,7 @@ void start_mining()
 
     for (uint32_t i = 0; i < max_worker_num; i++)
     {
+        mining_worker_t *worker = &((mining_worker_t *)mining_workers)[i];
         if (((mining_worker_t *)mining_workers)[i].on_service)
         {
             uv_queue_work(loop, &(((uv_work_t *)req)[i]), mine_with_req, after_mine);

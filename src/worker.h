@@ -32,10 +32,12 @@ typedef struct
 
 typedef struct mining_worker_t {
     bool on_service = false;
+
     cl_uint platform_index;
     cl_platform_id platform_id;
     cl_uint device_index;
     cl_device_id device_id;
+    size_t i;
     int grid_size;
     int block_size;
 
@@ -51,13 +53,14 @@ typedef struct mining_worker_t {
     uv_timer_t timer;
 } mining_worker_t;
 
-void mining_worker_init(mining_worker_t *self, cl_uint platform_index, cl_platform_id platform_id, cl_uint device_index, cl_device_id device_id)
+void mining_worker_init(mining_worker_t *self, cl_uint platform_index, cl_platform_id platform_id, cl_uint device_index, cl_device_id device_id, size_t i)
 {
     self->on_service = true;
     self->platform_index = platform_index;
     self->platform_id = platform_id;
     self->device_index = device_index;
     self->device_id = device_id;
+    self->i = i;
 
     // cudaSetDevice(device_id);
     // TRY( cudaStreamCreate(&(self->stream)) );
@@ -135,11 +138,11 @@ mining_worker_t *load_req_worker(uv_work_t *req)
 
 void store_req_data(cl_uint platform_index, cl_uint device_index, size_t worker_id, mining_worker_t *worker)
 {
-    uv_work_t _req = req[platform_index][device_index][worker_id];
-    if (!_req.data) {
-        _req.data = malloc(sizeof(mining_req_t));
+    uv_work_t *_req = &(req[platform_index][device_index][worker_id]);
+    if (!_req->data) {
+        _req->data = malloc(sizeof(mining_req_t));
     }
-    mining_req_t *mining_req = (mining_req_t *)(_req.data);
+    mining_req_t *mining_req = (mining_req_t *)(_req->data);
     atomic_store(&(mining_req->worker), worker);
 }
 
@@ -147,7 +150,7 @@ void mining_workers_init(cl_uint platform_index, cl_platform_id platform_id, cl_
 {
     for (size_t i = 0; i < parallel_mining_works_per_gpu; i++) {
         mining_worker_t *worker = &(mining_workers[platform_index][device_index][i]);
-        mining_worker_init(worker, platform_index, platform_id, device_index, device_id);
+        mining_worker_init(worker, platform_index, platform_id, device_index, device_id, i);
         store_req_data(platform_index, device_index, i, worker);
     }
 }
