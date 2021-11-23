@@ -10,12 +10,12 @@
 #include "constants.h"
 #include "uv.h"
 #include "messages.h"
-#include "blake3.cu"
 #include "pow.h"
 #include "worker.h"
 #include "template.h"
 #include "mining.h"
 #include "getopt.h"
+#include "opencl_util.h"
 
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::duration<double> duration_t;
@@ -26,17 +26,14 @@ uv_stream_t *tcp;
 
 time_point_t start_time = Time::now();
 
-std::atomic<int> gpu_count;
+std::atomic<int> platform_count;
+std::atomic<int> device_count[max_platform_num];
+std::atomic<cl_platform_id> platforms[max_platform_num];
+std::atomic<cl_device_id> devices[max_platform_num][max_gpu_num];
 std::atomic<int> worker_count;
 std::atomic<uint64_t> total_mining_count;
-std::atomic<uint64_t> device_mining_count[max_gpu_num];
-bool use_device[max_gpu_num];
-
-void setup_gpu_worker_count(int _gpu_count, int _worker_count)
-{
-    gpu_count.store(_gpu_count);
-    worker_count.store(_worker_count);
-}
+std::atomic<uint64_t> device_mining_count[max_platform_num][max_gpu_num];
+bool use_device[max_platform_num][max_gpu_num];
 
 void on_write_end(uv_write_t *req, int status)
 {
@@ -116,27 +113,27 @@ void after_mine(uv_work_t *req, int status)
     return;
 }
 
-void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data)
-{
-    mining_worker_t *worker = (mining_worker_t *)data;
-    if (worker->hasher->found_good_hash)
-    {
-        store_worker_found_good_hash(worker, true);
-        submit_new_block(worker);
-    }
+// void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data)
+// {
+//     mining_worker_t *worker = (mining_worker_t *)data;
+//     if (worker->hasher->found_good_hash)
+//     {
+//         store_worker_found_good_hash(worker, true);
+//         submit_new_block(worker);
+//     }
 
-    mining_template_t *template_ptr = load_worker__template(worker);
-    job_t *job = template_ptr->job;
-    uint32_t chain_index = job->from_group * group_nums + job->to_group;
-    mining_counts[chain_index].fetch_sub(mining_steps);
-    mining_counts[chain_index].fetch_add(worker->hasher->hash_count);
-    total_mining_count.fetch_add(worker->hasher->hash_count);
-    device_mining_count[worker->device_id].fetch_add(worker->hasher->hash_count);
+//     mining_template_t *template_ptr = load_worker__template(worker);
+//     job_t *job = template_ptr->job;
+//     uint32_t chain_index = job->from_group * group_nums + job->to_group;
+//     mining_counts[chain_index].fetch_sub(mining_steps);
+//     mining_counts[chain_index].fetch_add(worker->hasher->hash_count);
+//     total_mining_count.fetch_add(worker->hasher->hash_count);
+//     device_mining_count[worker->platform_index][worker->device_index].fetch_add(worker->hasher->hash_count);
 
-    free_template(template_ptr);
-    worker->async.data = worker;
-    uv_async_send(&(worker->async));
-}
+//     free_template(template_ptr);
+//     worker->async.data = worker;
+//     uv_async_send(&(worker->async));
+// }
 
 void start_mining()
 {
@@ -144,11 +141,11 @@ void start_mining()
 
     start_time = Time::now();
 
-    for (uint32_t i = 0; i < worker_count.load(); i++)
+    for (uint32_t i = 0; i < max_worker_num; i++)
     {
-        if (use_device[mining_workers[i].device_id])
+        if (((mining_worker_t *)mining_workers)[i].on_service)
         {
-            uv_queue_work(loop, &req[i], mine_with_req, after_mine);
+            uv_queue_work(loop, &(((uv_work_t *)req)[i]), mine_with_req, after_mine);
         }
     }
 }
@@ -182,17 +179,17 @@ void alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 
 void log_hashrate(uv_timer_t *timer)
 {
-    time_point_t current_time = Time::now();
-    if (current_time > start_time)
-    {
-        duration_t eplased = current_time - start_time;
-        printf("hashrate: %.0f MH/s ", total_mining_count.load() / eplased.count() / 1000000);
-        for (int i = 0; i < gpu_count; i++)
-        {
-            printf("gpu%d: %.0f MH/s ", i, device_mining_count[i].load() / eplased.count() / 1000000);
-        }
-        printf("\n");
-    }
+    // time_point_t current_time = Time::now();
+    // if (current_time > start_time)
+    // {
+    //     duration_t eplased = current_time - start_time;
+    //     printf("hashrate: %.0f MH/s ", total_mining_count.load() / eplased.count() / 1000000);
+    //     for (int i = 0; i < gpu_count; i++)
+    //     {
+    //         printf("gpu%d: %.0f MH/s ", i, device_mining_count[i].load() / eplased.count() / 1000000);
+    //     }
+    //     printf("\n");
+    // }
 }
 
 uint8_t read_buf[2048 * 1024 * chain_nums];
@@ -324,16 +321,20 @@ int main(int argc, char **argv)
     }
     #endif
 
-    int gpu_count;
-    cudaGetDeviceCount(&gpu_count);
-    printf("GPU count: %d\n", gpu_count);
-    for (int i = 0; i < gpu_count; i++)
+    cl_uint platform_count;
+    TRY(clGetPlatformIDs(0, NULL, &platform_count));
+    cl_platform_id *platforms = (cl_platform_id *)malloc(platform_count * sizeof(cl_platform_id));
+    for (cl_uint i = 0; i < platform_count; i++)
     {
-        printf("GPU #%d has #%d cores\n", i, get_device_cores(i));
-        use_device[i] = true;
+        cl_uint device_count;
+        TRY(clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &device_count));
+        cl_device_id *devices = (cl_device_id *)malloc(device_count * sizeof(cl_device_id));
+        for (cl_uint j = 0; j < device_count; j++)
+        {
+            mining_workers_init(i, platforms[i], j, devices[j]);
+            printf("Platform: %d, Device: %d\n", i, j);
+        }
     }
-    mining_workers_init(gpu_count);
-    setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);
 
     char broker_ip[16];
     strcpy(broker_ip, "127.0.0.1");
@@ -355,22 +356,22 @@ int main(int argc, char **argv)
             printf("will connect to broker @%s:10973\n", broker_ip);
             break;
 
-        case 'g':
-            for (int i = 0; i < gpu_count; i++)
-            {
-                use_device[i] = false;
-            }
-            optind--;
-            for (; optind < argc && *argv[optind] != '-'; optind++)
-            {
-                int device = atoi(argv[optind]);
-                if (device < 0 || device >= gpu_count) {
-                    printf("Invalid gpu index %d\n", device);
-                    exit(1);
-                }
-                use_device[device] = true;
-            }
-            break;
+        // case 'g':
+        //     for (int i = 0; i < gpu_count; i++)
+        //     {
+        //         use_device[i] = false;
+        //     }
+        //     optind--;
+        //     for (; optind < argc && *argv[optind] != '-'; optind++)
+        //     {
+        //         int device = atoi(argv[optind]);
+        //         if (device < 0 || device >= gpu_count) {
+        //             printf("Invalid gpu index %d\n", device);
+        //             exit(1);
+        //         }
+        //         use_device[device] = true;
+        //     }
+        //     break;
 
         default:
             printf("Invalid command %c\n", command);
@@ -387,10 +388,13 @@ int main(int argc, char **argv)
     uv_ip4_addr(broker_ip, 10973, &dest);
     uv_tcp_connect(connect, socket, (const struct sockaddr *)&dest, on_connect);
 
-    for (int i = 0; i < worker_count; i++)
+    for (int i = 0; i < max_worker_num; i++)
     {
-        uv_async_init(loop, &(mining_workers[i].async), mine_with_async);
-        uv_timer_init(loop, &(mining_workers[i].timer));
+        mining_worker_t *worker = &(((mining_worker_t *)mining_workers)[i]);
+        if (worker->on_service) {
+            uv_async_init(loop, &(worker->async), mine_with_async);
+            uv_timer_init(loop, &(worker->timer));
+        }
     }
 
     uv_timer_t log_timer;
