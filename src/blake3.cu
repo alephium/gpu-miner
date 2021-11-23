@@ -44,7 +44,7 @@
 #define CHUNK_END (1 << 1)
 #define ROOT (1 << 3)
 
-INLINE __device__ void cv_state_init(uint32_t *cv)
+INLINE void cv_state_init(uint32_t *cv)
 {
     cv[0] = IV_0;
     cv[1] = IV_1;
@@ -56,12 +56,12 @@ INLINE __device__ void cv_state_init(uint32_t *cv)
     cv[7] = IV_7;
 }
 
-INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
+INLINE void blake3_compress_in_place(uint32_t cv[8],
                                                 const uint8_t block[BLAKE3_BLOCK_LEN],
                                                 uint8_t block_len,
                                                 uint8_t flags);
 
-INLINE __device__ void chunk_state_update(uint32_t cv[8], uint8_t *input, size_t initial_len)
+INLINE void chunk_state_update(uint32_t cv[8], uint8_t *input, size_t initial_len)
 {
     ssize_t input_len = initial_len;
     assert(input_len > 0 && input_len <= BLAKE3_CHUNK_LEN);
@@ -84,7 +84,7 @@ INLINE __device__ void chunk_state_update(uint32_t cv[8], uint8_t *input, size_t
     }
 }
 
-INLINE __device__ uint32_t rotr32(uint32_t w, uint32_t c)
+INLINE uint32_t rotr32(uint32_t w, uint32_t c)
 {
     return (w >> c) | (w << (32 - c));
 }
@@ -230,7 +230,7 @@ INLINE __device__ uint32_t rotr32(uint32_t w, uint32_t c)
         G(0x3, 0x4, 0x9, 0xE, Mx(r, E), Mx(r, F)); \
     } while (0)
 
-INLINE __device__ void compress_pre(uint32_t state[16], const uint32_t cv[8],
+INLINE void compress_pre(uint32_t state[16], const uint32_t cv[8],
                                     const uint8_t block[BLAKE3_BLOCK_LEN],
                                     uint8_t block_len, uint8_t flags)
 {
@@ -262,7 +262,7 @@ INLINE __device__ void compress_pre(uint32_t state[16], const uint32_t cv[8],
     ROUND_S(6);
 }
 
-INLINE __device__ void blake3_compress_in_place(uint32_t cv[8],
+INLINE void blake3_compress_in_place(uint32_t cv[8],
                                                 const uint8_t block[BLAKE3_BLOCK_LEN],
                                                 uint8_t block_len,
                                                 uint8_t flags)
@@ -306,7 +306,7 @@ typedef struct
     int found_good_hash;
 } blake3_hasher;
 
-INLINE __device__ void blake3_hasher_hash(const blake3_hasher *self, uint8_t *input, size_t input_len, uint8_t *out)
+INLINE void blake3_hasher_hash(const blake3_hasher *self, uint8_t *input, size_t input_len, uint8_t *out)
 {
     cv_state_init((uint32_t *)self->cv);
     chunk_state_update((uint32_t *)&self->cv, input, input_len);
@@ -316,13 +316,13 @@ INLINE __device__ void blake3_hasher_hash(const blake3_hasher *self, uint8_t *in
     }
 }
 
-INLINE __device__ void blake3_hasher_double_hash(blake3_hasher *hasher)
+INLINE void blake3_hasher_double_hash(blake3_hasher *hasher)
 {
     blake3_hasher_hash(hasher, hasher->buf, BLAKE3_BUF_LEN, hasher->hash);
     blake3_hasher_hash(hasher, hasher->hash, BLAKE3_OUT_LEN, hasher->hash);
 }
 
-INLINE __device__ bool check_target(uint8_t *hash, uint8_t *target)
+INLINE bool check_target(uint8_t *hash, uint8_t *target)
 {
 #pragma unroll
     for (ssize_t i = 0; i < 32; i++)
@@ -339,24 +339,24 @@ INLINE __device__ bool check_target(uint8_t *hash, uint8_t *target)
     return true;
 }
 
-INLINE __device__ bool check_index(uint8_t *hash, uint32_t from_group, uint32_t to_group)
+INLINE bool check_index(uint8_t *hash, uint32_t from_group, uint32_t to_group)
 {
     uint8_t big_index = hash[31] % chain_nums;
     return (big_index / group_nums == from_group) && (big_index % group_nums == to_group);
 }
 
-INLINE __device__ bool check_hash(uint8_t *hash, uint8_t *target, uint32_t from_group, uint32_t to_group)
+INLINE bool check_hash(uint8_t *hash, uint8_t *target, uint32_t from_group, uint32_t to_group)
 {
     return check_target(hash, target) && check_index(hash, from_group, to_group);
 }
 
-INLINE __device__ void update_nonce(blake3_hasher *hasher, uint64_t delta)
+INLINE void update_nonce(blake3_hasher *hasher, uint64_t delta)
 {
     uint64_t *short_nonce = (uint64_t *)hasher->buf;
     *short_nonce += delta;
 }
 
-INLINE __device__ void copy_good_nonce(blake3_hasher *thread_hasher, blake3_hasher *global_hasher)
+INLINE void copy_good_nonce(blake3_hasher *thread_hasher, blake3_hasher *global_hasher)
 {
 #pragma unroll
     for (int i = 0; i < 24; i++)
