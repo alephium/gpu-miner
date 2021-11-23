@@ -370,7 +370,7 @@ INLINE void copy_good_nonce(blake3_hasher *thread_hasher, blake3_hasher *global_
     }
 }
 
-__global__ void blake3_hasher_mine(blake3_hasher *global_hasher)
+__kernel void blake3_hasher_mine(__global blake3_hasher *global_hasher)
 {
     blake3_hasher local_hasher = *global_hasher;
     blake3_hasher *hasher = &local_hasher;
