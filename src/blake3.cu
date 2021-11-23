@@ -22,7 +22,7 @@
         }                                                                                                                  \
     }
 
-#define INLINE __forceinline__
+#define INLINE static inline
 
 #define BLAKE3_KEY_LEN 32
 #define BLAKE3_OUT_LEN 32
