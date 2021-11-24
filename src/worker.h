@@ -34,14 +34,14 @@ typedef struct mining_worker_t {
     uv_timer_t timer;
 } mining_worker_t;
 
-void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
+void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id, int new_grid_calc)
 {
     self->id = id;
 
     self->device_id = device_id;
     cudaSetDevice(device_id);
     TRY( cudaStreamCreate(&(self->stream)) );
-    config_cuda(device_id, &self->grid_size, &self->block_size);
+    config_cuda(device_id, &self->grid_size, &self->block_size, new_grid_calc);
     printf("Worker %d: device id %d, grid size %d, block size %d\n", self->id, self->device_id, self->grid_size, self->block_size);
 
     TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
@@ -121,11 +121,11 @@ void store_req_data(ssize_t worker_id, mining_worker_t *worker)
     atomic_store(&(mining_req->worker), worker);
 }
 
-void mining_workers_init(int gpu_count)
+void mining_workers_init(int gpu_count, int new_grid_calc)
 {
     for (size_t i = 0; i < gpu_count * parallel_mining_works_per_gpu; i++) {
         mining_worker_t *worker = mining_workers + i;
-        mining_worker_init(worker, (uint32_t)i, i % gpu_count);
+        mining_worker_init(worker, (uint32_t)i, i % gpu_count, new_grid_calc);
         store_req_data(i, worker);
     }
 }
