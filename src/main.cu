@@ -336,7 +336,7 @@ int main(int argc, char **argv)
     char broker_ip[16];
     strcpy(broker_ip, "127.0.0.1");
 
-    bool new_grid_calc = false;
+    bool new_grid_calc = true;
     int command;
     while ((command = getopt(argc, argv, "g:a:o")) != -1)
     {
