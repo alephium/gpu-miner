@@ -42,8 +42,8 @@ typedef struct mining_worker_t {
     cl_command_queue queue;
     cl_program program;
     cl_kernel kernel;
-    int grid_size;
-    int block_size;
+    size_t grid_size;
+    size_t block_size;
 
     blake3_hasher *hasher;
     cl_mem device_hasher;
@@ -76,9 +76,9 @@ void mining_worker_init(mining_worker_t *self, cl_uint platform_index, cl_platfo
     printf("============ \n");
     CHECK(self->program = clCreateProgramWithSource(self->context, 1, (const char**)&kernel_source, &source_size, &err));
     TRY(clBuildProgram(self->program, 1, &self->device_id, NULL, NULL, NULL));
-    // CHECK(self->kernel = clCreateKernel(self->program, "blake3_hasher_mine", &err));
-    self->grid_size = 32;
-    self->block_size = 256;
+    CHECK(self->kernel = clCreateKernel(self->program, "blake3_hasher_mine", &err));
+    self->grid_size = 28 * 128;
+    self->block_size = 128;
 
     char *build_log;
     size_t log_size;

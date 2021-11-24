@@ -80,6 +80,7 @@ void mine(mining_worker_t *worker)
         worker->timer.data = worker;
         uv_timer_start(&worker->timer, mine_with_timer, 500, 0);
     } else {
+        printf("==== mine: %d %d\n", worker->platform_index, worker->device_index);
         mining_counts[to_mine_index].fetch_add(mining_steps);
         setup_template(worker, load_template(to_mine_index));
 
