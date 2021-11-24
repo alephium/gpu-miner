@@ -332,14 +332,13 @@ int main(int argc, char **argv)
         printf("GPU #%d has #%d cores\n", i, get_device_cores(i));
         use_device[i] = true;
     }
-    mining_workers_init(gpu_count);
-    setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);
 
     char broker_ip[16];
     strcpy(broker_ip, "127.0.0.1");
-
+	
+	int new_grid_calc = 0;
     int command;
-    while ((command = getopt(argc, argv, "g:a:")) != -1)
+    while ((command = getopt(argc, argv, "g:a:n")) != -1)
     {
         switch (command)
         {
@@ -371,12 +370,17 @@ int main(int argc, char **argv)
                 use_device[device] = true;
             }
             break;
-
+		case 'n':
+			new_grid_calc = true;
+			break;
         default:
             printf("Invalid command %c\n", command);
             exit(1);
         }
     }
+	
+    mining_workers_init(gpu_count, new_grid_calc);
+    setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);
 
     loop = uv_default_loop();
 

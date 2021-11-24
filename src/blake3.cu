@@ -513,13 +513,21 @@ int get_device_cores(int device_id)
     return cores_size;
 }
 
-void config_cuda(int device_id, int *grid_size, int *block_size)
+void config_cuda(int device_id, int *grid_size, int *block_size, int new_grid_calc)
 {
     cudaSetDevice(device_id);
     cudaOccupancyMaxPotentialBlockSize(grid_size, block_size, blake3_hasher_mine);
 
     int cores_size = get_device_cores(device_id);
-    *grid_size = cores_size / *block_size * 3 / 2;
+	if (new_grid_calc == 1){
+		cudaDeviceProp props;
+		cudaGetDeviceProperties(&props, device_id);
+		*grid_size = props.multiProcessorCount;
+		*block_size = cores_size / *grid_size;
+	 } else {
+		*grid_size = cores_size / *block_size * 3 / 2;
+	}
+	
 }
 
 #endif // ALEPHIUM_BLAKE3_CU
