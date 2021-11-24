@@ -326,6 +326,7 @@ int main(int argc, char **argv)
     TRY(clGetPlatformIDs(0, NULL, &platform_count));
     cl_platform_id *platforms = (cl_platform_id *)malloc(platform_count * sizeof(cl_platform_id));
     TRY(clGetPlatformIDs(platform_count, platforms, NULL));
+    cl_int err;
     for (cl_uint i = 0; i < platform_count; i++)
     {
         cl_uint device_count;

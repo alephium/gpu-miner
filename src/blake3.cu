@@ -1,25 +1,8 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-
-#include "constants.h"
-#include "messages.h"
-
-#define TRY(x)                                                                                                             \
-    {                                                                                                                      \
-        cudaGetLastError();                                                                                                \
-        x;                                                                                                                 \
-        cudaError_t err = cudaGetLastError();                                                                              \
-        if (err != cudaSuccess)                                                                                            \
-        {                                                                                                                  \
-            printf("cudaError %d (%s) calling '%s' (%s line %d)\n", err, cudaGetErrorString(err), #x, __FILE__, __LINE__); \
-            exit(1);                                                                                                       \
-        }                                                                                                                  \
-    }
-
 #define INLINE static inline
+
+#define group_nums 4
+#define chain_nums 16
+#define mining_steps 5000
 
 #define BLAKE3_KEY_LEN 32
 #define BLAKE3_OUT_LEN 32
@@ -41,6 +24,10 @@
 #define CHUNK_END (1 << 1)
 #define ROOT (1 << 3)
 
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+typedef unsigned long uint64_t;
+
 INLINE void cv_state_init(uint32_t *cv)
 {
     cv[0] = IV_0;
@@ -60,12 +47,11 @@ INLINE void blake3_compress_in_place(uint32_t cv[8],
 
 INLINE void chunk_state_update(uint32_t cv[8], uint8_t *input, size_t initial_len)
 {
-    ssize_t input_len = initial_len;
-    assert(input_len > 0 && input_len <= BLAKE3_CHUNK_LEN);
+    size_t input_len = initial_len;
 
     while (input_len > 0)
     {
-        ssize_t take = input_len >= BLAKE3_BLOCK_LEN ? BLAKE3_BLOCK_LEN : input_len;
+        size_t take = input_len >= BLAKE3_BLOCK_LEN ? BLAKE3_BLOCK_LEN : input_len;
 
         uint8_t maybe_start_flag = input_len == initial_len ? CHUNK_START : 0;
         input_len -= take;
@@ -73,7 +59,12 @@ INLINE void chunk_state_update(uint32_t cv[8], uint8_t *input, size_t initial_le
         if (input_len == 0)
         {
             maybe_end_flag = CHUNK_END | ROOT;
-            memset(input + take, 0, BLAKE3_BLOCK_LEN - take);
+            uint8_t *start = input + take;
+            for (int i = 0; i < BLAKE3_BLOCK_LEN - take; i++)
+            {
+                start[i] = 0;
+            }
+            // memset(input + take, 0, BLAKE3_BLOCK_LEN - take);
         }
 
         blake3_compress_in_place(cv, input, take, maybe_start_flag | maybe_end_flag);
@@ -322,7 +313,7 @@ INLINE void blake3_hasher_double_hash(blake3_hasher *hasher)
 INLINE bool check_target(uint8_t *hash, uint8_t *target)
 {
 #pragma unroll
-    for (ssize_t i = 0; i < 32; i++)
+    for (size_t i = 0; i < 32; i++)
     {
         if (hash[i] > target[i])
         {
@@ -374,8 +365,12 @@ __kernel void blake3_hasher_mine(__global blake3_hasher *global_hasher)
 
     hasher->hash_count = 0;
 
-    int stride = blockDim.x * gridDim.x;
-    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    int gridDim_x = get_num_groups(0);
+    int blockDim_x = get_local_size(0);
+    int blockIdx_x = get_group_id(0);
+    int threadIdx_x = get_local_id(0);
+    int stride = blockDim_x * gridDim_x;
+    int tid = threadIdx_x + blockIdx_x * blockDim_x;
     uint64_t *short_nonce = (uint64_t *)hasher->buf;
     *short_nonce = (*short_nonce) / stride * stride + tid;
 
@@ -389,13 +384,13 @@ __kernel void blake3_hasher_mine(__global blake3_hasher *global_hasher)
         if (check_hash(hasher->hash, hasher->target, hasher->from_group, hasher->to_group))
         {
             printf("tid %d found it !!\n", tid);
-            if (atomicCAS(&global_hasher->found_good_hash, 0, 1) == 0)
+            if (atomic_add(&global_hasher->found_good_hash, 1) == 0)
             {
                 copy_good_nonce(hasher, global_hasher);
             }
-            atomicAdd(&global_hasher->hash_count, hasher->hash_count);
+            atomic_add(&global_hasher->hash_count, hasher->hash_count);
             return;
         }
     }
-    atomicAdd(&global_hasher->hash_count, hasher->hash_count);
+    atomic_add(&global_hasher->hash_count, hasher->hash_count);
 }

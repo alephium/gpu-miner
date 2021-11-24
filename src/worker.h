@@ -38,11 +38,15 @@ typedef struct mining_worker_t {
     cl_uint device_index;
     cl_device_id device_id;
     size_t i;
+    cl_context context;
+    cl_command_queue queue;
+    cl_program program;
+    cl_kernel kernel;
     int grid_size;
     int block_size;
 
     blake3_hasher *hasher;
-    blake3_hasher *device_hasher;
+    cl_mem device_hasher;
 
     std::atomic<bool> found_good_hash;
     std::atomic<mining_template_t *> template_ptr;
@@ -55,6 +59,7 @@ typedef struct mining_worker_t {
 
 void mining_worker_init(mining_worker_t *self, cl_uint platform_index, cl_platform_id platform_id, cl_uint device_index, cl_device_id device_id, size_t i)
 {
+    cl_int err;
     self->on_service = true;
     self->platform_index = platform_index;
     self->platform_id = platform_id;
@@ -62,13 +67,33 @@ void mining_worker_init(mining_worker_t *self, cl_uint platform_index, cl_platfo
     self->device_id = device_id;
     self->i = i;
 
-    // cudaSetDevice(device_id);
-    // TRY( cudaStreamCreate(&(self->stream)) );
-    // config_cuda(device_id, &self->grid_size, &self->block_size);
-    // printf("Worker %d: device id %d, grid size %d, block size %d\n", self->id, self->device_id, self->grid_size, self->block_size);
+    cl_context_properties prop[] = { CL_CONTEXT_PLATFORM, reinterpret_cast<cl_context_properties>(self->platform_id), 0 };
+    CHECK(self->context = clCreateContext(prop, 1, &self->device_id, NULL, NULL, &err));
+    CHECK(self->queue = clCreateCommandQueue(self->context, self->device_id, 0, &err));
+    char *kernel_source = load_kernel_source("src/blake3.cu");
+    size_t source_size = strlen(kernel_source);
+    // printf("==== source %s\n", kernel_source);
+    printf("============ \n");
+    CHECK(self->program = clCreateProgramWithSource(self->context, 1, (const char**)&kernel_source, &source_size, &err));
+    TRY(clBuildProgram(self->program, 1, &self->device_id, NULL, NULL, NULL));
+    // CHECK(self->kernel = clCreateKernel(self->program, "blake3_hasher_mine", &err));
+    self->grid_size = 32;
+    self->block_size = 256;
 
-    // TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
-    // TRY( cudaMalloc(&(self->device_hasher), sizeof(blake3_hasher)) );
+    char *build_log;
+    size_t log_size;
+    clGetProgramBuildInfo(self->program, self->device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+    build_log = new char[log_size+1];
+    // Second call to get the log
+    clGetProgramBuildInfo(self->program, self->device_id, CL_PROGRAM_BUILD_LOG, log_size, build_log, NULL);
+    build_log[log_size] = '\0';
+    printf("==== build === %s\n", build_log);
+    delete[] build_log;
+
+    size_t hasher_size = sizeof(blake3_hasher);
+    self->hasher = (blake3_hasher *)malloc(hasher_size);
+    self->device_hasher = clCreateBuffer(self->context, CL_MEM_READ_WRITE, hasher_size, NULL, NULL);
+
     self->hasher = (blake3_hasher *)malloc(sizeof(blake3_hasher));
     memset(self->hasher->buf, 0, BLAKE3_BUF_CAP);
     memset(self->hasher->hash, 0, 64);
