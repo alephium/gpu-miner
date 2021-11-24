@@ -519,7 +519,7 @@ void config_cuda(int device_id, int *grid_size, int *block_size, int new_grid_ca
     cudaOccupancyMaxPotentialBlockSize(grid_size, block_size, blake3_hasher_mine);
 
     int cores_size = get_device_cores(device_id);
-    if (new_grid_calc == 1){
+    if (new_grid_calc) {
         cudaDeviceProp props;
         cudaGetDeviceProperties(&props, device_id);
         *grid_size = props.multiProcessorCount;

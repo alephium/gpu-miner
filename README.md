@@ -9,9 +9,7 @@ Please make sure that you have installed Nvidia driver for you GPU. You could ve
 1. Build the miner by running `curl -L https://github.com/alephium/gpu-miner/raw/master/get-miner.sh | bash`
 2. Run `gpu-miner/run-miner.sh` to start the miner
 
-You could specify the miner api with `-a broker` parameters, GPU indexes with `-g 1 2` and enable the alternate GPU init with '-n'.
-
-The alternate GPU init shouldn't have much impact on linux, but is very important on windows.
+You could specify the miner api with `-a broker` parameters, GPU indexes with `-g 1 2` and enable the alternate GPU init with '-o'. The alternate GPU init might improve performance for some cards.
 
 ### Windows miner from source code
 
@@ -31,8 +29,6 @@ The alternate GPU init shouldn't have much impact on linux, but is very importan
    ```
 
 Executable file will be generated in `your-gpu-miner-dir/bin/` directory.
-
-For best results, try to start the gpu-miner on windows using the alternate GPU init with '-n', as it can improve massively the mining speed on windows.
 
 If you have any questions, please reach out to us on Discord.
 
