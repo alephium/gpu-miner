@@ -39,14 +39,14 @@ typedef struct mining_worker_t {
     cl_device_id device_id;
     size_t i;
     cl_context context;
-    cl_command_queue queue;
-    cl_program program;
+    cl_command_queue queue = NULL;
+    cl_program program = NULL;
     cl_kernel kernel;
     size_t grid_size;
     size_t block_size;
 
     blake3_hasher *hasher;
-    cl_mem device_hasher;
+    cl_mem device_hasher = NULL;
 
     std::atomic<bool> found_good_hash;
     std::atomic<mining_template_t *> template_ptr;
@@ -92,7 +92,7 @@ void mining_worker_init(mining_worker_t *self, cl_uint platform_index, cl_platfo
 
     size_t hasher_size = sizeof(blake3_hasher);
     self->hasher = (blake3_hasher *)malloc(hasher_size);
-    self->device_hasher = clCreateBuffer(self->context, CL_MEM_READ_WRITE, hasher_size, NULL, NULL);
+    self->device_hasher = clCreateBuffer(self->context, CL_MEM_ALLOC_HOST_PTR, hasher_size, NULL, NULL);
 
     self->hasher = (blake3_hasher *)malloc(sizeof(blake3_hasher));
     memset(self->hasher->buf, 0, BLAKE3_BUF_CAP);
