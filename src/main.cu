@@ -336,9 +336,9 @@ int main(int argc, char **argv)
     char broker_ip[16];
     strcpy(broker_ip, "127.0.0.1");
 
-    int new_grid_calc = 0;
+    bool new_grid_calc = false;
     int command;
-    while ((command = getopt(argc, argv, "g:a:n")) != -1)
+    while ((command = getopt(argc, argv, "g:a:o")) != -1)
     {
         switch (command)
         {
@@ -370,8 +370,8 @@ int main(int argc, char **argv)
                 use_device[device] = true;
             }
             break;
-        case 'n':
-            new_grid_calc = true;
+        case 'o':
+            new_grid_calc = false;
             break;
         default:
             printf("Invalid command %c\n", command);
