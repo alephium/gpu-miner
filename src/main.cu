@@ -320,7 +320,7 @@ int main(int argc, char **argv)
     if (rc != 0)
     {
         printf("Initialize winsock failed: %d", rc);
-	exit(1);
+        exit(1);
     }
     #endif
 
@@ -335,8 +335,8 @@ int main(int argc, char **argv)
 
     char broker_ip[16];
     strcpy(broker_ip, "127.0.0.1");
-	
-	int new_grid_calc = 0;
+
+    int new_grid_calc = 0;
     int command;
     while ((command = getopt(argc, argv, "g:a:n")) != -1)
     {
@@ -370,15 +370,15 @@ int main(int argc, char **argv)
                 use_device[device] = true;
             }
             break;
-		case 'n':
-			new_grid_calc = true;
-			break;
+        case 'n':
+            new_grid_calc = true;
+            break;
         default:
             printf("Invalid command %c\n", command);
             exit(1);
         }
     }
-	
+
     mining_workers_init(gpu_count, new_grid_calc);
     setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);
 
