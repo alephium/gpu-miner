@@ -34,4 +34,4 @@ If you have any questions, please reach out to us on Discord.
 
 ### Pre-built miner
 
-You could also download and run the pre-built miner from [Github release page](https://github.com/alephium/gpu-miner/releases/tag/0.3.0). Note that your anti-virus might warn about the pre-built miner.
+You could also download and run the pre-built miner from [Github release page](https://github.com/alephium/gpu-miner/releases/tag/0.4.0). Note that your anti-virus might warn about the pre-built miner.
