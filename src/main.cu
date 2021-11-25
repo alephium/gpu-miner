@@ -349,7 +349,7 @@ int main(int argc, char **argv)
             }
             else
             {
-                hostname_to_ip(broker_ip, argv[optind]);
+                hostname_to_ip(broker_ip, optarg);
             }
             printf("will connect to broker @%s:10973\n", broker_ip);
             break;
