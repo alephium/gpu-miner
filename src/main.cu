@@ -274,7 +274,7 @@ void on_connect(uv_connect_t *req, int status)
 {
     if (status < 0)
     {
-        fprintf(stderr, "connection error %d: might be that the full node is reachable\n", status);
+        fprintf(stderr, "connection error %d: might be that the full node is not reachable\n", status);
         exit(1);
     }
     printf("the server is connected %d %p\n", status, req);

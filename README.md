@@ -19,7 +19,7 @@ You could specify the miner api with `-a broker` parameters, GPU indexes with `-
    1. Clone gpu-miner to local
 
    ``` sh
-   git clone --recurse-submodules https://github.com/alephium/alephium.git
+   git clone --recurse-submodules https://github.com/alephium/gpu-miner.git
    ```
    2. Open **x64** Native Tools Command Prompt and execute:
 
@@ -34,4 +34,4 @@ If you have any questions, please reach out to us on Discord.
 
 ### Pre-built miner
 
-You could also download and run the pre-built miner from [Github release page](https://github.com/alephium/gpu-miner/releases/tag/0.4.0). Note that your anti-virus might warn about the pre-built miner.
+You could also download and run the pre-built miner from [Github release page](https://github.com/alephium/gpu-miner/releases). Note that your anti-virus might warn about the pre-built miner.
