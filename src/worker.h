@@ -34,7 +34,7 @@ typedef struct mining_worker_t {
     uv_timer_t timer;
 } mining_worker_t;
 
-void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id, int new_grid_calc)
+void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
 {
     self->id = id;
 
@@ -121,11 +121,11 @@ void store_req_data(ssize_t worker_id, mining_worker_t *worker)
     atomic_store(&(mining_req->worker), worker);
 }
 
-void mining_workers_init(int gpu_count, int new_grid_calc)
+void mining_workers_init(int gpu_count)
 {
     for (size_t i = 0; i < gpu_count * parallel_mining_works_per_gpu; i++) {
         mining_worker_t *worker = mining_workers + i;
-        mining_worker_init(worker, (uint32_t)i, i % gpu_count, new_grid_calc);
+        mining_worker_init(worker, (uint32_t)i, i % gpu_count);
         store_req_data(i, worker);
     }
 }
