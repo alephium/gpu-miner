@@ -548,13 +548,12 @@ void config_cuda(int device_id, int *grid_size, int *block_size)
     cudaDeviceProp props;
     cudaGetDeviceProperties(&props, device_id);
     
-    
     // If using a 2xxx or 3xxx card, use the new grid calc
-    bool use_rtx_grid_bloc = ((major << 4) + minor) >= 0x75;
+    bool use_rtx_grid_bloc = ((props.major << 4) + props.minor) >= 0x75;
     
     // If compiling for windows, override the test and force the new calc
 #ifdef _WIN32
-	use_rtx_grid_bloc = true;
+    use_rtx_grid_bloc = true;
 #endif
     
     int cores_size = get_device_cores(device_id);

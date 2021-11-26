@@ -41,7 +41,7 @@ void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
     self->device_id = device_id;
     cudaSetDevice(device_id);
     TRY( cudaStreamCreate(&(self->stream)) );
-    config_cuda(device_id, &self->grid_size, &self->block_size, new_grid_calc);
+    config_cuda(device_id, &self->grid_size, &self->block_size);
     printf("Worker %d: device id %d, grid size %d, block size %d\n", self->id, self->device_id, self->grid_size, self->block_size);
 
     TRY( cudaMallocHost(&(self->hasher), sizeof(blake3_hasher)) );
