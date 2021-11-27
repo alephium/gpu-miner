@@ -1,0 +1,71 @@
+name: build artifacts
+on: [push]
+jobs:
+  build-linux-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+            
+      - uses: Jimver/cuda-toolkit@v0.2.4
+        id: cuda-toolkit
+        with:
+          cuda: '11.4.0'
+          sub-packages: '["nvcc"]'
+          method: 'network'
+          
+      - run: sudo apt-get install -y libuv1-dev
+      
+      - run: make linux-gpu
+      
+      - run: mv bin/gpu-miner bin/gpu-miner_$(git rev-parse --short "$GITHUB_SHA")
+      
+      - uses: actions/upload-artifact@v2
+        with:
+          name: linux-binary
+          path: bin/gpu-miner_*
+  
+  build-windows-artifact:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+      
+      - uses: Jimver/cuda-toolkit@v0.2.4
+        id: cuda-toolkit
+        with:
+          cuda: '11.4.0'
+          sub-packages: '["nvcc", "cudart"]'
+          method: 'network'
+          
+      - uses: actions/cache@v2
+        id: cache_libuv
+        with:
+          path: libuv/build
+          key: ${{ runner.os }}-${{ hashFiles('libuv/CMakeLists.txt') }} # Hash based on cmake defs
+          
+      - name: Build Libuv
+        if: steps.cache_libuv.outputs.cache-hit != 'true'
+        run: |
+             mkdir libuv/build
+             cd libuv/build 
+             cmake .. -DBUILD_TESTING=OFF
+             cmake --build . --config Release 
+             cd $GITHUB_WORKSPACE
+      
+      - name: Build Miner
+        run: |
+             nvcc --std c++11 -O3 --ptxas-options -v --x cu src/main.cu -Ilibuv/include -Llibuv/build/Release -lmsvcrt -luser32 -liphlpapi -luserenv -lws2_32 -luv_a -o bin/gpu-miner
+      
+      - run: |
+             $fileName = git rev-parse --short HEAD
+             mv bin/gpu-miner.exe "bin/gpu-miner_$fileName.exe"
+      
+      - uses: actions/upload-artifact@v2
+        with:
+          name: windows-binary
+          path: bin/gpu-miner_*.exe
