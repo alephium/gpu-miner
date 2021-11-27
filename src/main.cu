@@ -336,7 +336,6 @@ int main(int argc, char **argv)
     char broker_ip[16];
     strcpy(broker_ip, "127.0.0.1");
 
-    bool new_grid_calc = true;
     int command;
     while ((command = getopt(argc, argv, "g:a:o")) != -1)
     {
@@ -370,16 +369,13 @@ int main(int argc, char **argv)
                 use_device[device] = true;
             }
             break;
-        case 'o':
-            new_grid_calc = false;
-            break;
         default:
             printf("Invalid command %c\n", command);
             exit(1);
         }
     }
 
-    mining_workers_init(gpu_count, new_grid_calc);
+    mining_workers_init(gpu_count);
     setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);
 
     loop = uv_default_loop();
