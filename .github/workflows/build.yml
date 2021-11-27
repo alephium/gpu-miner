@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
             
-      - uses: Jimver/cuda-toolkit@v0.2.4
+      - uses: Jimver/cuda-toolkit@v0.2.4 # Can't cache the install :(
         id: cuda-toolkit
         with:
           cuda: '11.4.0'
@@ -15,7 +15,9 @@ jobs:
       
       - run: make linux-gpu
       
+      - run: mv bin/gpu-miner bin/gpu-miner-$(git rev-parse --short "$GITHUB_SHA")
+      
       - uses: actions/upload-artifact@v2
         with:
-          name: gpu-miner
-          path: /home/runner/work/gpu-miner/bin/
+          name: linux-binary
+          path: bin/gpu-miner-*
