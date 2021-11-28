@@ -1,7 +1,9 @@
 name: build artifacts
 on: [push]
+
 jobs:
   build-linux-artifact:
+    name: build-linux-artifact
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -13,11 +15,14 @@ jobs:
           sub-packages: '["nvcc"]'
           method: 'network'
           
-      - run: sudo apt-get install -y libuv1-dev
+      - name: Install dependencies
+        run: sudo apt-get install -y libuv1-dev
       
-      - run: make linux-gpu
+      - name: Build miner
+        run: make linux-gpu
       
-      - run: mv bin/gpu-miner bin/gpu-miner_$(git rev-parse --short "$GITHUB_SHA")
+      - name: Rename miner
+        run: mv bin/gpu-miner bin/gpu-miner_$(git rev-parse --short "$GITHUB_SHA")
       
       - uses: actions/upload-artifact@v2
         with:
@@ -25,6 +30,7 @@ jobs:
           path: bin/gpu-miner_*
   
   build-windows-artifact:
+    name: build-windows-artifact
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
@@ -61,11 +67,48 @@ jobs:
         run: |
              nvcc --std c++11 -O3 --ptxas-options -v --x cu src/main.cu -Ilibuv/include -Llibuv/build/Release -lmsvcrt -luser32 -liphlpapi -luserenv -lws2_32 -luv_a -o bin/gpu-miner
       
-      - run: |
+      - name: Rename Miner
+        run: |
              $fileName = git rev-parse --short HEAD
-             mv bin/gpu-miner.exe "bin/gpu-miner_$fileName.exe"
+             cp bin/gpu-miner.exe "bin/gpu-miner_$fileName.exe"
       
       - uses: actions/upload-artifact@v2
         with:
           name: windows-binary
           path: bin/gpu-miner_*.exe
+      
+      - name: Get linux artifact (Release prep)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-binary
+          path: bin/
+      
+      - name: Get the version (Release prep)
+        if: startsWith(github.ref, 'refs/tags/')
+        id: get_version
+        run: |
+          version=$(echo ${GITHUB_REF/refs\/tags\//} | cut -c 2-)
+          echo ::set-output name=VERSION::$version
+        shell: bash
+      
+      - name: Generate miners checksums (Release prep)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+             $fileName = git rev-parse --short HEAD
+             $hash = Get-FileHash -Algorithm SHA256 "bin/gpu-miner.exe" | Select -ExpandProperty "Hash"
+             Write-Output $hash.ToLower()"alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-windows.exe" | Out-File -FilePath "bin\alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-windows.exe.checksum"
+             mv "bin/gpu-miner.exe" "bin\alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-windows.exe"
+             $hash = Get-FileHash -Algorithm SHA256 "bin\gpu-miner_$fileName" | Select -ExpandProperty "Hash"
+             Write-Output $hash.ToLower()"alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-linux" | Out-File -FilePath "bin\alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-linux.checksum"
+             mv "bin\gpu-miner_$fileName" "bin\alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-linux"
+             dir bin
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            bin\alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-linux
+            bin\alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-linux.checksum
+            bin\alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-windows.exe
+            bin\alephium-${{ steps.get_version.outputs.VERSION }}-cuda-miner-windows.exe.checksum
