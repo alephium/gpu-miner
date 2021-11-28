@@ -7,83 +7,84 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-            
+
       - uses: Jimver/cuda-toolkit@v0.2.4
         id: cuda-toolkit
         with:
           cuda: '11.4.0'
           sub-packages: '["nvcc"]'
           method: 'network'
-          
+
       - name: Install dependencies
         run: sudo apt-get install -y libuv1-dev
-      
+
       - name: Build miner
         run: make linux-gpu
-      
+
       - name: Rename miner
         run: mv bin/gpu-miner bin/gpu-miner_$(git rev-parse --short "$GITHUB_SHA")
-      
+
       - uses: actions/upload-artifact@v2
         with:
           name: linux-binary
           path: bin/gpu-miner_*
-  
+
   build-windows-artifact:
     name: build-windows-artifact
     runs-on: windows-latest
+    needs: build-linux-artifact
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-          
+
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: amd64
-      
+
       - uses: Jimver/cuda-toolkit@v0.2.4
         id: cuda-toolkit
         with:
           cuda: '11.4.0'
           sub-packages: '["nvcc", "cudart"]'
           method: 'network'
-          
+
       - uses: actions/cache@v2
         id: cache_libuv
         with:
           path: libuv/build
           key: ${{ runner.os }}-${{ hashFiles('libuv/CMakeLists.txt') }} # Hash based on cmake defs
-          
+
       - name: Build Libuv
         if: steps.cache_libuv.outputs.cache-hit != 'true'
         run: |
              mkdir libuv/build
-             cd libuv/build 
+             cd libuv/build
              cmake .. -DBUILD_TESTING=OFF
-             cmake --build . --config Release 
+             cmake --build . --config Release
              cd $GITHUB_WORKSPACE
-      
+
       - name: Build Miner
         run: |
              nvcc --std c++11 -O3 --ptxas-options -v --x cu src/main.cu -Ilibuv/include -Llibuv/build/Release -lmsvcrt -luser32 -liphlpapi -luserenv -lws2_32 -luv_a -o bin/gpu-miner
-      
+
       - name: Rename Miner
         run: |
              $fileName = git rev-parse --short HEAD
              cp bin/gpu-miner.exe "bin/gpu-miner_$fileName.exe"
-      
+
       - uses: actions/upload-artifact@v2
         with:
           name: windows-binary
           path: bin/gpu-miner_*.exe
-      
+
       - name: Get linux artifact (Release prep)
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/download-artifact@v2
         with:
           name: linux-binary
           path: bin/
-      
+
       - name: Get the version (Release prep)
         if: startsWith(github.ref, 'refs/tags/')
         id: get_version
@@ -91,7 +92,7 @@ jobs:
           version=$(echo ${GITHUB_REF/refs\/tags\//} | cut -c 2-)
           echo ::set-output name=VERSION::$version
         shell: bash
-      
+
       - name: Generate miners checksums (Release prep)
         if: startsWith(github.ref, 'refs/tags/')
         run: |
