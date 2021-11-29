@@ -313,6 +313,8 @@ int hostname_to_ip(char *ip_address, char *hostname)
 
 int main(int argc, char **argv)
 {
+    setbuf(stdout, NULL);
+
     #ifdef _WIN32
     WSADATA wsa;
     // current winsocket version is 2.2
