@@ -27,7 +27,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build miner
-        run: chmod +x make.sh && ./make.sh
+        run: ./make.sh
 
       - name: Rename miner
         run: mv bin/gpu-miner bin/gpu-miner_$(git rev-parse --short "$GITHUB_SHA")

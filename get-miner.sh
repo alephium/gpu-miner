@@ -18,6 +18,6 @@ echo "Git cloning gpu-miner"
 git clone https://github.com/alephium/gpu-miner.git
 
 echo "Building the gpu miner"
-chmod +x ./gpu-miner/make.sh && ./gpu-miner/make.sh
+./gpu-miner/make.sh
 
 echo "Your miner is built, you could run it with: gpu-miner/run-miner.sh"

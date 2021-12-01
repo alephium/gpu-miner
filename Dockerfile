@@ -7,7 +7,7 @@ RUN apt update && \
     pip3 install conan
 
 COPY ./ ./
-RUN chmod +x make.sh && ./make.sh
+RUN ./make.sh
 
 FROM nvidia/cuda:11.0-base
 
