@@ -9,7 +9,7 @@ then
 fi
 
 echo "Installing build-essential, python3-pip and nvidia-cuda-toolkit"
-sudo apt install -y build-essential python3-pip nvidia-cuda-toolkit
+sudo apt install -y build-essential python3-pip nvidia-cuda-toolkit cmake
 
 echo "Installing conan"
 python3 -m pip install conan
