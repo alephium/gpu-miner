@@ -159,6 +159,6 @@ jobs:
           build-args: RELEASE=${{ steps.get_version.outputs.VERSION-NO-V }}
           platforms: linux/amd64
           tags: |
-            docker.io/capito27/gpu-miner:${{ steps.get_version.outputs.VERSION }}
-            docker.io/capito27/gpu-miner:latest
+            docker.io/alephium/gpu-miner:${{ steps.get_version.outputs.VERSION }}
+            docker.io/alephium/gpu-miner:latest
           push: true
