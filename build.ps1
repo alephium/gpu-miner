@@ -1,22 +1,10 @@
-$rootPath = Get-Location
-$libuvPath = Join-Path $rootPath "libuv"
-Set-Location $libuvPath
-Remove-Item -Recurse -Force $libuvPath/build -ErrorAction Ignore
-New-Item -Path $libuvPath -Name "build" -ItemType "directory" | Out-Null
+# requires powershell3 or later
 
-# build libuv
-$buildPath = Join-Path $libuvPath "build"
-Set-Location $buildPath
-cmd /c "cmake .."
-Set-Location $libuvPath
-cmd /c "cmake --build build --config Release"
+cd $PSScriptRoot
 
-# add include path and lib path
-$includePath = Join-Path $libuvPath "include"
-$env:Include += ";$includePath"
-$libPath = Join-Path $buildPath "Release"
-$env:Lib += ";$libPath"
-
-# build gpu-miner
-Set-Location $rootPath
-cmd /c "nvcc --std c++11 -O3 --ptxas-options -v --x cu src/main.cu -lmsvcrt -luser32 -liphlpapi -luserenv -lws2_32 -luv_a -o bin/gpu-miner"
+mkdir -p build
+cd build >$null 2>&1
+# Specify the x64 architecture, otherwise can't find cuda
+cmake .. -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 16 2019" -A x64
+cmake --build . --config Release --target gpu-miner
+cd ..

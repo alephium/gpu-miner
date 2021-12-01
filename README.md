@@ -14,18 +14,19 @@ You could specify the miner api with `-a broker` parameters, GPU indexes with `-
 ### Windows miner from source code
 
 1. Install Visual Studio Build Tools, Recommend [VS 2019](https://visualstudio.microsoft.com/vs/older-downloads/#visual-studio-2019-and-other-products)
-2. Install [CUDA Toolkits](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64)
-3. Build gpu-miner:
+2. Install [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64) (11.5 was tested and working)
+3. Install [conan](https://docs.conan.io/en/latest/installation.html)
+4. Build gpu-miner:
    1. Clone gpu-miner to local
 
    ``` sh
-   git clone --recurse-submodules https://github.com/alephium/gpu-miner.git
+   git clone https://github.com/alephium/gpu-miner.git
    ```
-   2. Open **x64** Native Tools Command Prompt and execute:
+   2. Open a powershell window, and launch the build script:
 
    ```sh
    cd your-gpu-miner-dir
-   make gpu
+   .\build.ps1
    ```
 
 Executable file will be generated in `your-gpu-miner-dir/bin/` directory.

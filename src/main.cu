@@ -310,6 +310,9 @@ int hostname_to_ip(char *ip_address, char *hostname)
     freeaddrinfo(servinfo);
     return 0;
 }
+#ifndef MINER_VERSION
+#define MINER_VERSION "unknown"
+#endif
 
 int main(int argc, char **argv)
 {
@@ -325,6 +328,8 @@ int main(int argc, char **argv)
         exit(1);
     }
     #endif
+
+    printf("Running gpu-miner version : %s\n", MINER_VERSION);
 
     int gpu_count;
     cudaGetDeviceCount(&gpu_count);
