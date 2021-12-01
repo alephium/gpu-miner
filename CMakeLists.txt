@@ -27,8 +27,6 @@ endif()
 
 message(miner version : ${miner-version})
 
-enable_language(CUDA)
-
 # Set default target architecture to 3xxx
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES 86)
@@ -44,8 +42,6 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 conan_cmake_run(REQUIRES libuv/1.42.0
         BASIC_SETUP)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-
 # Target definitions
 add_executable(gpu-miner src/main.cu)
 set_property(TARGET gpu-miner PROPERTY CXX_STANDARD 11)
@@ -54,8 +50,7 @@ target_compile_definitions(gpu-miner PUBLIC MINER_VERSION="${miner-version}")
 target_link_libraries(gpu-miner PRIVATE ${CONAN_LIBS})
 #Copy binary to bin directory
 add_custom_command(TARGET gpu-miner
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:gpu-miner> ${CMAKE_SOURCE_DIR}/bin)
+        POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:gpu-miner> ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(blake3-test src/blake3.cu)
 set_property(TARGET blake3-test PROPERTY CXX_STANDARD 11)
@@ -63,5 +58,4 @@ target_compile_definitions(blake3-test PUBLIC BLAKE3_TEST)
 target_link_libraries(blake3-test PRIVATE ${CONAN_LIBS})
 #Copy binary to bin directory
 add_custom_command(TARGET blake3-test
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:blake3-test> ${CMAKE_SOURCE_DIR}/bin)
+        POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:blake3-test> ${CMAKE_SOURCE_DIR}/bin)
