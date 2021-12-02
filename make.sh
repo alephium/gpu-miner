@@ -24,9 +24,9 @@ then
     # Try installing
     (temp_file=$(mktemp --suffix=.deb) && \
      curl -s -L https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb -o $temp_file && \
-     sudo apt-get -y  install $temp_file >/dev/null) || ((echoerr "Could not install cmake, exiting") && exit)
+     sudo apt-get -y  install $temp_file >/dev/null) || ((echoerr "Could not install conan, exiting") && exit)
     # Die if not found
-    (command -v cmake &>/dev/null) || ((echoerr "Installed CMake not found, exiting") && exit)
+    (command -v cmake &>/dev/null) || ((echoerr "Installed conan not found, exiting") && exit)
     echo "Success !"
 fi
 
