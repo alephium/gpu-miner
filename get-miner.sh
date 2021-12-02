@@ -8,13 +8,19 @@ then
     exit 1
 fi
 
-echo "Installing build-essential libuv nvidia-cuda-toolkit"
-sudo apt install -y build-essential libuv1-dev nvidia-cuda-toolkit
+echo "Installing build-essential, python3-pip and nvidia-cuda-toolkit"
+sudo apt install -y build-essential nvidia-cuda-toolkit cmake
+
+echo "Installing conan"
+temp_file=$(mktemp --suffix=.deb)
+curl -L https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb -o $temp_file
+sudo apt install $temp_file
+rm -f $temp_file
 
 echo "Git cloning gpu-miner"
 git clone https://github.com/alephium/gpu-miner.git
 
 echo "Building the gpu miner"
-cd gpu-miner && make linux-gpu
+./gpu-miner/make.sh
 
 echo "Your miner is built, you could run it with: gpu-miner/run-miner.sh"
