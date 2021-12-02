@@ -29,7 +29,7 @@ message(miner version : ${miner-version})
 
 # Set default target architecture to 3xxx
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-	set(CMAKE_CUDA_ARCHITECTURES "86;80;75;72;70;62;61;60;53;52;50;37;35")
+    set(CMAKE_CUDA_ARCHITECTURES "86;80;75;72;70;62;61;60;53;52;50;37;35")
 endif()
 
 #Setup conan
