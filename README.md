@@ -13,7 +13,7 @@ You could specify the miner api with `-a broker` parameters, GPU indexes with `-
 
 ### Windows miner from source code
 
-1. Install Visual Studio Build Tools, Recommend [VS 2019](https://visualstudio.microsoft.com/vs/older-downloads/#visual-studio-2019-and-other-products)
+1. Install [Visual Studio Build Tools 2019](https://visualstudio.microsoft.com/vs/older-downloads/#visual-studio-2019-and-other-products), making sure to select [C++ CMake tools for Windows](https://docs.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio?view=msvc-170#installation) during the installation.
 2. Install [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64) (11.5 was tested and working)
 3. Install [conan](https://docs.conan.io/en/latest/installation.html)
 4. Build gpu-miner:

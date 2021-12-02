@@ -15,16 +15,11 @@ jobs:
           sub-packages: '["nvcc"]'
           method: 'network'
           
-      - run: echo "conan==1.42.2" > requirements.txt
-      
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
-          architecture: 'x64'
-          cache: 'pip'
-          
       - name: Install Dependency
-        run: pip install -r requirements.txt
+        run: |
+             temp_file=$(mktemp --suffix=.deb)
+             curl -L https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb -o $temp_file
+             sudo apt install $temp_file
 
       - name: Build miner
         run: ./make.sh

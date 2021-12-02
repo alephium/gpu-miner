@@ -9,10 +9,13 @@ then
 fi
 
 echo "Installing build-essential, python3-pip and nvidia-cuda-toolkit"
-sudo apt install -y build-essential python3-pip nvidia-cuda-toolkit cmake
+sudo apt install -y build-essential nvidia-cuda-toolkit cmake
 
 echo "Installing conan"
-python3 -m pip install conan
+temp_file=$(mktemp --suffix=.deb)
+curl -L https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb -o $temp_file
+sudo apt install $temp_file
+rm -f $temp_file
 
 echo "Git cloning gpu-miner"
 git clone https://github.com/alephium/gpu-miner.git
