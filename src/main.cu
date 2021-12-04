@@ -345,7 +345,7 @@ int main(int argc, char **argv)
     strcpy(broker_ip, "127.0.0.1");
 
     int command;
-    while ((command = getopt(argc, argv, "p:g:a:o")) != -1)
+    while ((command = getopt(argc, argv, "p:g:a:")) != -1)
     {
         switch (command)
         {
