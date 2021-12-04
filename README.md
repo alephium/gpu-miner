@@ -6,8 +6,17 @@ Please make sure that you have installed Nvidia driver for you GPU. You could ve
 
 ### Ubuntu miner from source code
 
-1. Build the miner by running `curl -L https://github.com/alephium/gpu-miner/raw/master/get-miner.sh | bash`
-2. Run `gpu-miner/run-miner.sh` to start the miner
+1. Build the miner by running
+
+  ```shell
+  curl -L https://github.com/alephium/gpu-miner/raw/master/get-miner.sh | bash
+  ```
+
+2. Start the miner
+
+  ```shell
+  gpu-miner/run-miner.sh
+  ```
 
 You could specify the miner api with `-a broker` parameters, GPU indexes with `-g 1 2`.
 
