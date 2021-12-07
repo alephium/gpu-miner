@@ -3,7 +3,7 @@
 set -eu
 
 if ! command -v jq &> /dev/null
-then 
+then
     echo "Installing jq"
     sudo apt install -y jq
 fi
@@ -28,7 +28,7 @@ fi
 SCRIPT_DIR=`dirname "$BASH_SOURCE"`
 
 echo "Launching the miner and restart automatically if it crashes"
-until $SCRIPT_DIR/bin/gpu-miner; do
+until $SCRIPT_DIR/bin/gpu-miner $*; do
     echo "Miner crashed with exit code $?.  Respawning.." >&2
     sleep 1
 done
