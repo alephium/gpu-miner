@@ -8,7 +8,7 @@ then
     sudo apt install -y jq
 fi
 
-if ! node=$(curl --silent -X 'GET' 'http://127.0.0.1:12973/infos/self-clique'); then
+if ! node=$(curl --silent -X 'GET' "http://${2:-127.0.0.1}:12973/infos/self-clique"); then
     echo "Your full node is not running"
     exit 1
 fi
@@ -19,7 +19,7 @@ if [ -z "$synced" ] || [ "$synced" != "true" ]; then
     exit 1
 fi
 
-addresses=$(curl --silent -X 'GET' 'http://127.0.0.1:12973/miners/addresses' | jq '.addresses')
+addresses=$(curl --silent -X 'GET' "http://${2:-127.0.0.1}:12973/miners/addresses" | jq '.addresses')
 if [ -z "$addresses" ]; then
     echo "Miner addresses are not set"
     exit 1
