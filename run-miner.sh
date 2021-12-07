@@ -28,7 +28,7 @@ fi
 SCRIPT_DIR=`dirname "$BASH_SOURCE"`
 
 echo "Launching the miner and restart automatically if it crashes"
-until $SCRIPT_DIR/bin/gpu-miner; do
+until $SCRIPT_DIR/bin/gpu-miner -a <IP>; do
     echo "Miner crashed with exit code $?.  Respawning.." >&2
     sleep 1
 done
