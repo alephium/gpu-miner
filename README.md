@@ -28,17 +28,21 @@ You could specify the miner api with `-a broker` parameters, GPU indexes with `-
 4. Build gpu-miner:
    1. Clone gpu-miner to local
 
-   ``` sh
+   ``` shell
    git clone https://github.com/alephium/gpu-miner.git
    ```
    2. Open a powershell window, and launch the build script:
 
-   ```sh
+   ```shell
    cd your-gpu-miner-dir
    .\build.ps1
    ```
+   Executable file will be generated in `your-gpu-miner-dir/bin/` directory.
 
-Executable file will be generated in `your-gpu-miner-dir/bin/` directory.
+5. Start the miner in a powershell window :
+  ```shell
+  .\run-miner.ps1
+  ```
 
 If you have any questions, please reach out to us on Discord.
 
