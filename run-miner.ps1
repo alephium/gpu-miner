@@ -1,6 +1,7 @@
 ﻿
 $API_HOST="127.0.0.1"
-# Hide progress bar
+
+
 $node=Invoke-RestMethod -Uri "http://$($API_HOST):12973/infos/self-clique" -Method GET -ErrorAction SilentlyContinue
 
 if ($node -eq $null) {
