@@ -14,7 +14,6 @@
 #include "uv.h"
 #include "template.h"
 
-
 typedef struct mining_worker_t {
     uint32_t id;
 
@@ -41,6 +40,62 @@ typedef struct mining_worker_t {
     uv_timer_t timer;
 } mining_worker_t;
 
+// Helper methods
+void* hasher(mining_worker_t *self, bool is_host){
+    if (is_host){
+        return self->is_inline_miner ? reinterpret_cast<void*>(self->host_hasher.inline_hasher): reinterpret_cast<void*>(self->host_hasher.ref_hasher);
+    } else {
+        return self->is_inline_miner ? reinterpret_cast<void*>(self->device_hasher.inline_hasher): reinterpret_cast<void*>(self->device_hasher.ref_hasher);
+    }
+}
+void** hasher_ptr(mining_worker_t *self, bool is_host){
+    if (is_host){
+        return self->is_inline_miner ? reinterpret_cast<void**>(&self->host_hasher.inline_hasher): reinterpret_cast<void**>(&self->host_hasher.ref_hasher);
+    } else {
+        return self->is_inline_miner ? reinterpret_cast<void**>(&self->device_hasher.inline_hasher): reinterpret_cast<void**>(&self->device_hasher.ref_hasher);
+    }
+}
+
+size_t hasher_len(mining_worker_t *self){
+    return self->is_inline_miner ? sizeof(inline_blake::blake3_hasher): sizeof(ref_blake::blake3_hasher);
+}
+
+uint8_t* hasher_buf(mining_worker_t *self, bool is_host){
+    if (is_host){
+        return self->is_inline_miner ? self->host_hasher.inline_hasher->buf: self->host_hasher.ref_hasher->buf;
+    } else {
+        return self->is_inline_miner ? self->device_hasher.inline_hasher->buf: self->device_hasher.ref_hasher->buf;
+    }
+}
+
+uint8_t* hasher_hash(mining_worker_t *self, bool is_host){
+    if (is_host){
+        return self->is_inline_miner ? self->host_hasher.inline_hasher->hash: self->host_hasher.ref_hasher->hash;
+    } else {
+        return self->is_inline_miner ? self->device_hasher.inline_hasher->hash: self->device_hasher.ref_hasher->hash;
+    }
+}
+size_t hasher_hash_len(mining_worker_t *self){
+    return self->is_inline_miner ? sizeof(self->device_hasher.inline_hasher->hash): sizeof(self->device_hasher.ref_hasher->hash);
+}
+uint32_t hasher_hash_count(mining_worker_t *self, bool is_host){
+    if (is_host){
+        return self->is_inline_miner ? self->host_hasher.inline_hasher->hash_count: self->host_hasher.ref_hasher->hash_count;
+    } else {
+        return self->is_inline_miner ? self->device_hasher.inline_hasher->hash_count: self->device_hasher.ref_hasher->hash_count;
+
+    }
+}
+int hasher_found_good_hash(mining_worker_t *self, bool is_host){
+    if (is_host){
+        return self->is_inline_miner ? self->host_hasher.inline_hasher->found_good_hash: self->host_hasher.ref_hasher->found_good_hash;
+    } else {
+        return self->is_inline_miner ? self->device_hasher.inline_hasher->found_good_hash: self->device_hasher.ref_hasher->found_good_hash;
+    }
+}
+
+
+
 void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
 {
     self->id = id;
@@ -51,20 +106,11 @@ void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id)
     config_cuda(device_id, &self->grid_size, &self->block_size, &self->is_inline_miner);
     printf("Worker %d: device id %d, grid size %d, block size %d. Using %s kernel\n", self->id, self->device_id, self->grid_size, self->block_size, self->is_inline_miner ? "inline":"reference");
 
-    // Initialise hashers based on which kernel is getting used
-    if (self->is_inline_miner){
-        TRY( cudaMallocHost(&(self->host_hasher.inline_hasher), sizeof(inline_blake::blake3_hasher)) );
-        TRY( cudaMalloc(&(self->device_hasher.inline_hasher), sizeof(inline_blake::blake3_hasher)) );
-        memset(self->host_hasher.inline_hasher->buf, 0, BLAKE3_BUF_CAP);
-        memset(self->host_hasher.inline_hasher->hash, 0, 64);
-        self->random_gen.seed(self->id + (uint64_t)self + (uint64_t)self->host_hasher.inline_hasher + rand());
-    } else{
-        TRY( cudaMallocHost(&(self->host_hasher.ref_hasher), sizeof(ref_blake::blake3_hasher)) );
-        TRY( cudaMalloc(&(self->device_hasher.ref_hasher), sizeof(ref_blake::blake3_hasher)) );
-        memset(self->host_hasher.ref_hasher->buf, 0, BLAKE3_BUF_CAP);
-        memset(self->host_hasher.ref_hasher->hash, 0, 64);
-        self->random_gen.seed(self->id + (uint64_t)self + (uint64_t)self->host_hasher.ref_hasher + rand());
-    }
+    TRY( cudaMallocHost(hasher_ptr(self, true), hasher_len(self)) );
+    TRY( cudaMalloc(hasher_ptr(self, false), hasher_len(self)) );
+    memset(hasher_buf(self, true), 0, BLAKE3_BUF_CAP);
+    memset(hasher_hash(self, true), 0, hasher_hash_len(self));
+    self->random_gen.seed(self->id + (uint64_t)self + (uint64_t)hasher(self, true) + rand());
 
 }
 
@@ -91,44 +137,33 @@ void store_worker__template(mining_worker_t *worker, mining_template_t *template
 void reset_worker(mining_worker_t *worker)
 {
     std::uniform_int_distribution<> distrib(0, UINT8_MAX);
-    bool inline_kernel = worker->is_inline_miner;
     mining_template_t *template_ptr = worker->template_ptr.load();
     job_t *job = template_ptr->job;
 
-    if (inline_kernel){
-        inline_blake::blake3_hasher *hasher = worker->host_hasher.inline_hasher;
-        for (int i = 0; i < 24; i++) {
-            hasher->buf[i] = distrib(worker->random_gen);
-        }
-        memcpy(hasher->buf + 24, job->header_blob.blob, job->header_blob.len);
-        assert((24 + job->header_blob.len) == BLAKE3_BUF_LEN);
-        assert((24 + job->header_blob.len + 63) / 64 * 64 == BLAKE3_BUF_CAP);
+    for (int i = 0; i < 24; i++) {
+        hasher_buf(worker, true)[i] = distrib(worker->random_gen);
+    }
 
-        size_t target_zero_len = 32 - job->target.len;
+    memcpy(hasher_buf(worker, true) + 24, job->header_blob.blob, job->header_blob.len);
+    assert((24 + job->header_blob.len) == BLAKE3_BUF_LEN);
+    assert((24 + job->header_blob.len + 63) / 64 * 64 == BLAKE3_BUF_CAP);
+
+    size_t target_zero_len = 32 - job->target.len;
+
+    if(worker->is_inline_miner){
+        inline_blake::blake3_hasher *hasher = worker->host_hasher.inline_hasher;
         memset(hasher->target, 0, target_zero_len);
         memcpy(hasher->target + target_zero_len, job->target.blob, job->target.len);
-
         hasher->from_group = job->from_group;
         hasher->to_group = job->to_group;
-
         hasher->hash_count = 0;
         hasher->found_good_hash = false;
     } else {
         ref_blake::blake3_hasher *hasher = worker->host_hasher.ref_hasher;
-        for (int i = 0; i < 24; i++) {
-            hasher->buf[i] = distrib(worker->random_gen);
-        }
-        memcpy(hasher->buf + 24, job->header_blob.blob, job->header_blob.len);
-        assert((24 + job->header_blob.len) == BLAKE3_BUF_LEN);
-        assert((24 + job->header_blob.len + 63) / 64 * 64 == BLAKE3_BUF_CAP);
-
-        size_t target_zero_len = 32 - job->target.len;
         memset(hasher->target, 0, target_zero_len);
         memcpy(hasher->target + target_zero_len, job->target.blob, job->target.len);
-
         hasher->from_group = job->from_group;
         hasher->to_group = job->to_group;
-
         hasher->hash_count = 0;
         hasher->found_good_hash = false;
 

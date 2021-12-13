@@ -62,11 +62,7 @@ void submit_new_block(mining_worker_t *worker)
 
     ssize_t buf_size = write_new_block(worker, write_buffer);
     uv_buf_t buf = uv_buf_init((char *)write_buffer, buf_size);
-    if (worker->is_inline_miner) {
-        print_hex("new block", (uint8_t *) worker->host_hasher.inline_hasher->hash, 32);
-    } else {
-        print_hex("new block", (uint8_t *) worker->host_hasher.ref_hasher->hash, 32);
-    }
+    print_hex("new block", (uint8_t *) hasher_buf(worker, true), 32);
 
     uv_write_t *write_req = (uv_write_t *)malloc(sizeof(uv_write_t));
     uint32_t buf_count = 1;
@@ -123,41 +119,22 @@ void after_mine(uv_work_t *req, int status)
 void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data)
 {
     mining_worker_t *worker = (mining_worker_t *)data;
-    if (worker->is_inline_miner){
-        if (worker->host_hasher.inline_hasher->found_good_hash)
-        {
-            store_worker_found_good_hash(worker, true);
-            submit_new_block(worker);
-        }
-
-        mining_template_t *template_ptr = load_worker__template(worker);
-        job_t *job = template_ptr->job;
-        uint32_t chain_index = job->from_group * group_nums + job->to_group;
-        mining_counts[chain_index].fetch_sub(mining_steps);
-        mining_counts[chain_index].fetch_add(worker->host_hasher.inline_hasher->hash_count);
-        total_mining_count.fetch_add(worker->host_hasher.inline_hasher->hash_count);
-        device_mining_count[worker->device_id].fetch_add(worker->host_hasher.inline_hasher->hash_count);
-        free_template(template_ptr);
-        worker->async.data = worker;
-        uv_async_send(&(worker->async));
-    } else {
-        if (worker->host_hasher.ref_hasher->found_good_hash)
-        {
-            store_worker_found_good_hash(worker, true);
-            submit_new_block(worker);
-        }
-
-        mining_template_t *template_ptr = load_worker__template(worker);
-        job_t *job = template_ptr->job;
-        uint32_t chain_index = job->from_group * group_nums + job->to_group;
-        mining_counts[chain_index].fetch_sub(mining_steps);
-        mining_counts[chain_index].fetch_add(worker->host_hasher.ref_hasher->hash_count);
-        total_mining_count.fetch_add(worker->host_hasher.ref_hasher->hash_count);
-        device_mining_count[worker->device_id].fetch_add(worker->host_hasher.ref_hasher->hash_count);
-        free_template(template_ptr);
-        worker->async.data = worker;
-        uv_async_send(&(worker->async));
+    if (hasher_found_good_hash(worker, true))
+    {
+        store_worker_found_good_hash(worker, true);
+        submit_new_block(worker);
     }
+
+    mining_template_t *template_ptr = load_worker__template(worker);
+    job_t *job = template_ptr->job;
+    uint32_t chain_index = job->from_group * group_nums + job->to_group;
+    mining_counts[chain_index].fetch_sub(mining_steps);
+    mining_counts[chain_index].fetch_add(hasher_hash_count(worker, true));
+    total_mining_count.fetch_add(hasher_hash_count(worker, true));
+    device_mining_count[worker->device_id].fetch_add(hasher_hash_count(worker, true));
+    free_template(template_ptr);
+    worker->async.data = worker;
+    uv_async_send(&(worker->async));
 
 
 }

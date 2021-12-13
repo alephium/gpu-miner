@@ -10,11 +10,7 @@ void start_worker_mining(mining_worker_t *worker)
     cudaSetDevice(worker->device_id);
 
     reset_worker(worker);
-    if (worker->is_inline_miner){
-        TRY( cudaMemcpyAsync(worker->device_hasher.inline_hasher, worker->host_hasher.inline_hasher, sizeof(inline_blake::blake3_hasher), cudaMemcpyHostToDevice, worker->stream) );
-    } else{
-        TRY( cudaMemcpyAsync(worker->device_hasher.ref_hasher, worker->host_hasher.ref_hasher, sizeof(ref_blake::blake3_hasher), cudaMemcpyHostToDevice, worker->stream) );
-    }
+    TRY( cudaMemcpyAsync(hasher(worker, false), hasher(worker, true), hasher_len(worker), cudaMemcpyHostToDevice, worker->stream) );
 
     cudaEvent_t startEvent, stopEvent;
     TRY( cudaEventCreate(&startEvent) );
@@ -29,11 +25,7 @@ void start_worker_mining(mining_worker_t *worker)
     }
     TRY( cudaEventRecord(stopEvent, worker->stream) );
 
-    if (worker->is_inline_miner) {
-        TRY(cudaMemcpyAsync(worker->host_hasher.inline_hasher, worker->device_hasher.inline_hasher, sizeof(inline_blake::blake3_hasher), cudaMemcpyDeviceToHost, worker->stream));
-    } else{
-        TRY(cudaMemcpyAsync(worker->host_hasher.ref_hasher, worker->device_hasher.ref_hasher, sizeof(ref_blake::blake3_hasher), cudaMemcpyDeviceToHost, worker->stream));
-    }
+    TRY(cudaMemcpyAsync(hasher(worker, true), hasher(worker, false), hasher_len(worker), cudaMemcpyDeviceToHost, worker->stream));
 
     TRY( cudaStreamAddCallback(worker->stream, worker_stream_callback, worker, 0) );
 
