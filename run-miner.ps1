@@ -1,8 +1,12 @@
 ﻿
 $API_HOST="127.0.0.1"
+$API_KEY="0000000000000000000000000000000000000000000000000000000000000000"
 
+$KEY_HEADER=@{
+    'X-API-KEY' = $API_KEY
+}
 
-$node=Invoke-RestMethod -Uri "http://$($API_HOST):12973/infos/self-clique" -Method GET -ErrorAction SilentlyContinue
+$node=Invoke-RestMethod -Uri "http://$($API_HOST):12973/infos/self-clique" -Method GET -Headers $KEY_HEADER -ErrorAction SilentlyContinue
 
 if ($node -eq $null) {
 	Write-Host "Your full node is not running"
@@ -14,7 +18,7 @@ if ( ( -Not [bool]($node.PSobject.Properties.name -match "synced")) -or $node.sy
 	Exit 1
 }
 
-$addresses=$(Invoke-RestMethod -Uri "http://$($API_HOST):12973/miners/addresses" -Method GET -ErrorAction SilentlyContinue).addresses
+$addresses=$(Invoke-RestMethod -Uri "http://$($API_HOST):12973/miners/addresses" -Method GET -Headers $KEY_HEADER -ErrorAction SilentlyContinue).addresses
 
 if ($addresses -eq $null) {
     Write-Host "Miner addresses are not set"
