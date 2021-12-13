@@ -45,7 +45,7 @@ try{
 		# Check if GPU usage stalled (in some cases of error -4095, the process doesn't die, but GPU usage stops)
 		$gpu_usage=0
 		$usage_threshold=75 # Expect at least 75% gpu usage at all times
-		((Get-Counter "\GPU Engine(pid_$($miner_pid)*engtype_Copy)\Utilization Percentage").CounterSamples | where CookedValue).CookedValue |
+		((Get-Counter "\GPU Engine(pid_$($miner_pid)*engtype_Cuda)\Utilization Percentage").CounterSamples | where CookedValue).CookedValue |
 			foreach { $gpu_usage = 0 } { $gpu_usage += [math]::Round($_,2) }
 			
 		Write-Output "Process $($miner_pid) GPU Engine Usage $($gpu_usage)%"
