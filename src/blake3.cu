@@ -9,19 +9,6 @@
 #include "constants.h"
 #include "messages.h"
 
-#define INLINE __forceinline__
-#define TRY(x)                                                                                                             \
-    {                                                                                                                      \
-        cudaGetLastError();                                                                                                \
-        x;                                                                                                                 \
-        cudaError_t err = cudaGetLastError();                                                                              \
-        if (err != cudaSuccess)                                                                                            \
-        {                                                                                                                  \
-            printf("cudaError %d (%s) calling '%s' (%s line %d)\n", err, cudaGetErrorString(err), #x, __FILE__, __LINE__); \
-            exit(1);                                                                                                       \
-        }                                                                                                                  \
-    }
-
 
 // Include both blake implementations
 #include "blake3/inlined-blake.hpp"

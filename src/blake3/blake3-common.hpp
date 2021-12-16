@@ -1,6 +1,19 @@
 #ifndef ALEPHIUM_BLAKE3_COMMON_H
 #define ALEPHIUM_BLAKE3_COMMON_H
 
+#define INLINE __forceinline__
+#define TRY(x)                                                                                                             \
+    {                                                                                                                      \
+        cudaGetLastError();                                                                                                \
+        x;                                                                                                                 \
+        cudaError_t err = cudaGetLastError();                                                                              \
+        if (err != cudaSuccess)                                                                                            \
+        {                                                                                                                  \
+            printf("cudaError %d (%s) calling '%s' (%s line %d)\n", err, cudaGetErrorString(err), #x, __FILE__, __LINE__); \
+            exit(1);                                                                                                       \
+        }                                                                                                                  \
+    }
+
 #define BLAKE3_KEY_LEN 32
 #define BLAKE3_OUT_LEN 32
 #define BLAKE3_BLOCK_LEN 64
