@@ -394,6 +394,7 @@ int main(int argc, char **argv)
 
     uv_tcp_t *socket = (uv_tcp_t *)malloc(sizeof(uv_tcp_t));
     uv_tcp_init(loop, socket);
+    uv_tcp_nodelay(socket, 1);
     uv_connect_t *connect = (uv_connect_t *)malloc(sizeof(uv_connect_t));
     struct sockaddr_in dest;
     uv_ip4_addr(broker_ip, port, &dest);

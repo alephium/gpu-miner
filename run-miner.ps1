@@ -1,8 +1,12 @@
 ﻿
 $API_HOST="127.0.0.1"
+$API_KEY="0000000000000000000000000000000000000000000000000000000000000000"
 
+$KEY_HEADER=@{
+    'X-API-KEY' = $API_KEY
+}
 
-$node=Invoke-RestMethod -Uri "http://$($API_HOST):12973/infos/self-clique" -Method GET -ErrorAction SilentlyContinue
+$node=Invoke-RestMethod -Uri "http://$($API_HOST):12973/infos/self-clique" -Method GET -Headers $KEY_HEADER -ErrorAction SilentlyContinue
 
 if ($node -eq $null) {
 	Write-Host "Your full node is not running"
@@ -14,7 +18,7 @@ if ( ( -Not [bool]($node.PSobject.Properties.name -match "synced")) -or $node.sy
 	Exit 1
 }
 
-$addresses=$(Invoke-RestMethod -Uri "http://$($API_HOST):12973/miners/addresses" -Method GET -ErrorAction SilentlyContinue).addresses
+$addresses=$(Invoke-RestMethod -Uri "http://$($API_HOST):12973/miners/addresses" -Method GET -Headers $KEY_HEADER -ErrorAction SilentlyContinue).addresses
 
 if ($addresses -eq $null) {
     Write-Host "Miner addresses are not set"
@@ -41,7 +45,7 @@ try{
 		# Check if GPU usage stalled (in some cases of error -4095, the process doesn't die, but GPU usage stops)
 		$gpu_usage=0
 		$usage_threshold=75 # Expect at least 75% gpu usage at all times
-		((Get-Counter "\GPU Engine(pid_$($miner_pid)*engtype_Copy)\Utilization Percentage").CounterSamples | where CookedValue).CookedValue |
+		((Get-Counter "\GPU Engine(pid_$($miner_pid)*engtype_Cuda)\Utilization Percentage").CounterSamples | where CookedValue).CookedValue |
 			foreach { $gpu_usage = 0 } { $gpu_usage += [math]::Round($_,2) }
 			
 		Write-Output "Process $($miner_pid) GPU Engine Usage $($gpu_usage)%"
