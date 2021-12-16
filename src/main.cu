@@ -62,7 +62,7 @@ void submit_new_block(mining_worker_t *worker)
 
     ssize_t buf_size = write_new_block(worker, write_buffer);
     uv_buf_t buf = uv_buf_init((char *)write_buffer, buf_size);
-    print_hex("new block", (uint8_t *) hasher_buf(worker, true), 32);
+    print_hex("new solution", (uint8_t *) hasher_buf(worker, true), 32);
 
     uv_write_t *write_req = (uv_write_t *)malloc(sizeof(uv_write_t));
     uint32_t buf_count = 1;
