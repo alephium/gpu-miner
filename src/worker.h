@@ -43,6 +43,7 @@ typedef struct mining_worker_t {
 
 #define MINER_IMPL(worker) ((worker)->is_inline_miner ? inline_blake::blake3_hasher_mine:ref_blake::blake3_hasher_mine)
 #define HASHER(worker, host) ((host) ? (worker)->host_hasher:(worker)->device_hasher)
+#define HASHER_ELEM(hasher, is_inline, elem) ((is_inline) ? (hasher).inline_hasher->elem:(hasher).ref_hasher->elem)
 
 
 // Helper methods
@@ -136,24 +137,13 @@ void reset_worker(mining_worker_t *worker) {
 
     size_t target_zero_len = 32 - job->target.len;
 
-    if (worker->is_inline_miner) {
-        inline_blake::blake3_hasher *hasher = worker->host_hasher.inline_hasher;
-        memset(hasher->target, 0, target_zero_len);
-        memcpy(hasher->target + target_zero_len, job->target.blob, job->target.len);
-        hasher->from_group = job->from_group;
-        hasher->to_group = job->to_group;
-        hasher->hash_count = 0;
-        hasher->found_good_hash = false;
-    } else {
-        ref_blake::blake3_hasher *hasher = worker->host_hasher.ref_hasher;
-        memset(hasher->target, 0, target_zero_len);
-        memcpy(hasher->target + target_zero_len, job->target.blob, job->target.len);
-        hasher->from_group = job->from_group;
-        hasher->to_group = job->to_group;
-        hasher->hash_count = 0;
-        hasher->found_good_hash = false;
-
-    }
+    memset(HASHER_ELEM(worker->host_hasher, worker->is_inline_miner, target), 0, target_zero_len);
+    memcpy(HASHER_ELEM(worker->host_hasher, worker->is_inline_miner, target) + target_zero_len, job->target.blob,
+           job->target.len);
+    HASHER_ELEM(worker->host_hasher, worker->is_inline_miner, from_group) = job->from_group;
+    HASHER_ELEM(worker->host_hasher, worker->is_inline_miner, to_group) = job->to_group;
+    HASHER_ELEM(worker->host_hasher, worker->is_inline_miner, hash_count) = 0;
+    HASHER_ELEM(worker->host_hasher, worker->is_inline_miner, found_good_hash) = false;
 
     store_worker_found_good_hash(worker, false);
 }
