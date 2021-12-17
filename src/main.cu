@@ -17,6 +17,9 @@
 #include "mining.h"
 #include "getopt.h"
 
+
+std::atomic<uint32_t> found_solutions{0};
+
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::duration<double> duration_t;
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
@@ -68,6 +71,7 @@ void submit_new_block(mining_worker_t *worker)
     uint32_t buf_count = 1;
 
     uv_write(write_req, tcp, &buf, buf_count, on_write_end);
+    found_solutions.fetch_add(1, std::memory_order_relaxed);
 }
 
 void mine_with_timer(uv_timer_t *timer);
@@ -192,7 +196,7 @@ void log_hashrate(uv_timer_t *timer)
         {
             printf("gpu%d: %.0f MH/s ", i, device_mining_count[i].load() / eplased.count() / 1000000);
         }
-        printf("\n");
+        printf("solutions: %u\n", found_solutions.load(std::memory_order_relaxed));
     }
 }
 
@@ -332,7 +336,7 @@ int main(int argc, char **argv)
 
     printf("Running gpu-miner version : %s\n", MINER_VERSION);
 
-    int gpu_count;
+    int gpu_count = 0;
     cudaGetDeviceCount(&gpu_count);
     printf("GPU count: %d\n", gpu_count);
     for (int i = 0; i < gpu_count; i++)

@@ -38,7 +38,7 @@ uint32_t sub_template__ref_count(mining_template_t *template_ptr, uint32_t value
 void free_template(mining_template_t *template_ptr)
 {
     uint32_t old_count = sub_template__ref_count(template_ptr, 1);
-    if (old_count == 0) {
+    if (old_count == 1) { // fetch_sub returns original value
         free_job(template_ptr->job);
         free(template_ptr);
     }
