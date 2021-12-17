@@ -332,7 +332,7 @@ int main(int argc, char **argv)
 
     printf("Running gpu-miner version : %s\n", MINER_VERSION);
 
-    int gpu_count;
+    int gpu_count = 0;
     cudaGetDeviceCount(&gpu_count);
     printf("GPU count: %d\n", gpu_count);
     for (int i = 0; i < gpu_count; i++)
