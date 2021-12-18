@@ -410,7 +410,7 @@ int main(int argc, char **argv)
 
     uv_timer_t log_timer;
     uv_timer_init(loop, &log_timer);
-    uv_timer_start(&log_timer, log_hashrate, 5000, 5000);
+    uv_timer_start(&log_timer, log_hashrate, 5000, 20000);
 
     uv_run(loop, UV_RUN_DEFAULT);
 

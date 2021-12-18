@@ -185,7 +185,6 @@ ssize_t write_new_block(mining_worker_t *worker, uint8_t *write_buf) {
     ssize_t block_size = 24 + job->header_blob.len + job->txs_blob.len;
     ssize_t message_size = 1 + 4 + block_size;
 
-    printf("message: %zd\n", message_size);
     write_size(&write_pos, message_size);
     write_byte(&write_pos, 0); // message type
     write_size(&write_pos, block_size);
