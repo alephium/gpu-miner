@@ -250,28 +250,26 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
     }
 
     server_message_t *message = decode_buf(buf, nread);
-    if (!message)
+    if (message)
     {
-        return;
-    }
-
-    switch (message->kind)
-    {
-    case JOBS:
-        for (int i = 0; i < message->jobs->len; i++)
+        switch (message->kind)
         {
-            update_templates(message->jobs->jobs[i]);
-        }
-        start_mining_if_needed();
-        break;
+        case JOBS:
+            for (int i = 0; i < message->jobs->len; i++)
+            {
+                update_templates(message->jobs->jobs[i]);
+            }
+            start_mining_if_needed();
+            break;
 
-    case SUBMIT_RESULT:
-        printf("submitted: %d -> %d: %d \n", message->submit_result->from_group, message->submit_result->to_group, message->submit_result->status);
-        break;
+        case SUBMIT_RESULT:
+            printf("submitted: %d -> %d: %d \n", message->submit_result->from_group, message->submit_result->to_group, message->submit_result->status);
+            break;
+        }
+        free_server_message_except_jobs(message);
     }
 
     free(buf->base);
-    free_server_message_except_jobs(message);
     // uv_close((uv_handle_t *) server, free_close_cb);
 }
 
