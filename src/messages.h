@@ -282,7 +282,7 @@ server_message_t *decode_server_message(blob_t *blob)
     assert(pos == (bytes + message_byte_size));
     if (message_byte_size < len) {
         blob->len = len - message_byte_size;
-        memcpy(blob->blob, pos, blob->len);
+        memmove(blob->blob, pos, blob->len);
     } else {
         blob->len = 0;
     }
