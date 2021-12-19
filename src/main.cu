@@ -55,11 +55,7 @@ std::mutex write_mutex;
 uint8_t write_buffer[4096 * 1024];
 void submit_new_block(mining_worker_t *worker)
 {
-    if (!expire_template_for_new_block(load_worker__template(worker)))
-    {
-        printf("mined a parallel block, will not submit\n");
-        return;
-    }
+    expire_template_for_new_block(load_worker__template(worker));
 
     const std::lock_guard<std::mutex> lock(write_mutex);
 
@@ -139,8 +135,6 @@ void worker_stream_callback(cudaStream_t stream, cudaError_t status, void *data)
     free_template(template_ptr);
     worker->async.data = worker;
     uv_async_send(&(worker->async));
-
-
 }
 
 void start_mining()
