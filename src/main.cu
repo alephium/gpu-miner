@@ -250,7 +250,7 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 {
     if (nread < 0)
     {
-        fprintf(stderr, "error on_read %ld: try to reconnect\n", nread);
+        fprintf(stderr, "error on_read %ld: might be that the full node is not synced, or miner wallets are not setup, try to reconnect\n", nread);
         uv_timer_start(&reconnect_timer, try_to_reconnect, 5000, 0);
         return;
     }
@@ -288,8 +288,9 @@ void on_connect(uv_connect_t *req, int status)
 {
     if (status < 0)
     {
-        fprintf(stderr, "connection error %d: might be that the full node is not reachable\n", status);
-        exit(1);
+        fprintf(stderr, "connection error %d: might be that the full node is not reachable, try to reconnect\n", status);
+        uv_timer_start(&reconnect_timer, try_to_reconnect, 5000, 0);
+        return;
     }
     printf("the server is connected %d %p\n", status, req);
 
