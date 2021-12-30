@@ -13,6 +13,7 @@
 #include "blake3.cu"
 #include "uv.h"
 #include "template.h"
+#include "log.h"
 
 typedef struct mining_worker_t {
     uint32_t id;
@@ -95,7 +96,7 @@ void mining_worker_init(mining_worker_t *self, uint32_t id, int device_id) {
     cudaSetDevice(device_id);
     TRY(cudaStreamCreate(&(self->stream)));
     config_cuda(device_id, &self->grid_size, &self->block_size, &self->is_inline_miner);
-    printf("Worker %d: device id %d, grid size %d, block size %d. Using %s kernel\n", self->id, self->device_id,
+    LOG("Worker %d: device id %d, grid size %d, block size %d. Using %s kernel\n", self->id, self->device_id,
            self->grid_size, self->block_size, self->is_inline_miner ? "inline" : "reference");
 
     TRY(cudaMallocHost(hasher_ptr(self, true), hasher_len(self)));

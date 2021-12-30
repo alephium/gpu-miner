@@ -2,6 +2,7 @@
 #define ALEPHIUM_MINING_H
 
 #include "blake3.cu"
+#include "log.h"
 
 //#define SHOW_MINING_TIME  1
 
@@ -37,7 +38,7 @@ void start_worker_mining(mining_worker_t *worker)
     TRY( cudaEventElapsedTime(&time, startEvent, stopEvent) );
     TRY( cudaEventDestroy(&startEvent) );
     TRY( cudaEventDestroy(&stopEvent) );
-    printf(" === mining time: %f\n", time);
+    LOG(" === mining time: %f\n", time);
 #endif
 }
 
