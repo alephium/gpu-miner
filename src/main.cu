@@ -52,7 +52,6 @@ void on_write_end(uv_write_t *req, int status)
     if (status < 0)
     {
         LOGERR("error on_write_end %d\n", status);
-        exit(1);
     }
     free(req);
 }
@@ -409,6 +408,7 @@ int main(int argc, char **argv)
     }
     LOG("will connect to broker @%s:%d\n", broker_ip, port);
 
+    signal(SIGPIPE, SIG_IGN);
     mining_workers_init(gpu_count);
     setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);
 
