@@ -1,3 +1,6 @@
+#ifndef ALEPHIUM_LOG_H
+#define ALEPHIUM_LOG_H
+
 #include <stdio.h>
 #include <time.h>
 
@@ -26,3 +29,5 @@
 #define LOG(format, ...) LOG_WITH_TS(stdout, format, ##__VA_ARGS__);
 
 #define LOGERR(format, ...) LOG_WITH_TS(stderr, format, ##__VA_ARGS__);
+
+#endif // ALEPHIUM_LOG_H
