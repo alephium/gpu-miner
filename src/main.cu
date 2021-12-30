@@ -16,7 +16,7 @@
 #include "template.h"
 #include "mining.h"
 #include "getopt.h"
-
+#include "log.h"
 
 std::atomic<uint32_t> found_solutions{0};
 
@@ -51,8 +51,7 @@ void on_write_end(uv_write_t *req, int status)
 {
     if (status < 0)
     {
-        fprintf(stderr, "error on_write_end %d", status);
-        exit(1);
+        LOGERR("error on_write_end %d\n", status);
     }
     free(req);
 }
@@ -85,7 +84,7 @@ void mine(mining_worker_t *worker)
     int32_t to_mine_index = next_chain_to_mine();
     if (to_mine_index == -1)
     {
-        printf("waiting for new tasks\n");
+        LOG("waiting for new tasks\n");
         worker->timer.data = worker;
         uv_timer_start(&worker->timer, mine_with_timer, 500, 0);
     } else {
@@ -95,7 +94,7 @@ void mine(mining_worker_t *worker)
         start_worker_mining(worker);
 
         duration_t elapsed = Time::now() - start;
-        // printf("=== mining time: %fs\n", elapsed.count());
+        // LOG("=== mining time: %fs\n", elapsed.count());
     }
 }
 
@@ -191,12 +190,12 @@ void log_hashrate(uv_timer_t *timer)
     if (current_time > start_time)
     {
         duration_t eplased = current_time - start_time;
-        printf("hashrate: %.0f MH/s ", total_mining_count.load() / eplased.count() / 1000000);
+        LOG("hashrate: %.0f MH/s ", total_mining_count.load() / eplased.count() / 1000000);
         for (int i = 0; i < gpu_count; i++)
         {
-            printf("gpu%d: %.0f MH/s ", i, device_mining_count[i].load() / eplased.count() / 1000000);
+            LOG_WITHOUT_TS("gpu%d: %.0f MH/s ", i, device_mining_count[i].load() / eplased.count() / 1000000);
         }
-        printf("solutions: %u\n", found_solutions.load(std::memory_order_relaxed));
+        LOG_WITHOUT_TS("solutions: %u\n", found_solutions.load(std::memory_order_relaxed));
     }
 }
 
@@ -250,7 +249,7 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
 {
     if (nread < 0)
     {
-        fprintf(stderr, "error on_read %ld: might be that the full node is not synced, or miner wallets are not setup, try to reconnect\n", nread);
+        LOGERR("error on_read %ld: might be that the full node is not synced, or miner wallets are not setup, try to reconnect\n", nread);
         uv_timer_start(&reconnect_timer, try_to_reconnect, 5000, 0);
         return;
     }
@@ -274,7 +273,7 @@ void on_read(uv_stream_t *server, ssize_t nread, const uv_buf_t *buf)
             break;
 
         case SUBMIT_RESULT:
-            printf("submitted: %d -> %d: %d \n", message->submit_result->from_group, message->submit_result->to_group, message->submit_result->status);
+            LOG("submitted: %d -> %d: %d \n", message->submit_result->from_group, message->submit_result->to_group, message->submit_result->status);
             break;
         }
         free_server_message_except_jobs(message);
@@ -288,11 +287,11 @@ void on_connect(uv_connect_t *req, int status)
 {
     if (status < 0)
     {
-        fprintf(stderr, "connection error %d: might be that the full node is not reachable, try to reconnect\n", status);
+        LOGERR("connection error %d: might be that the full node is not reachable, try to reconnect\n", status);
         uv_timer_start(&reconnect_timer, try_to_reconnect, 5000, 0);
         return;
     }
-    printf("the server is connected %d %p\n", status, req);
+    LOG("the server is connected %d %p\n", status, req);
 
     tcp = req->handle;
     uv_read_start(req->handle, alloc_buffer, on_read);
@@ -325,7 +324,7 @@ int hostname_to_ip(char *ip_address, char *hostname)
     int res = getaddrinfo(hostname, NULL, &hints, &servinfo);
     if (res != 0)
     {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(res));
+        LOGERR("getaddrinfo: %s\n", gai_strerror(res));
         return 1;
     }
 
@@ -349,19 +348,19 @@ int main(int argc, char **argv)
     int rc = WSAStartup(MAKEWORD(2, 2), &wsa);
     if (rc != 0)
     {
-        printf("Initialize winsock failed: %d", rc);
+        LOGERR("Initialize winsock failed: %d\n", rc);
         exit(1);
     }
     #endif
 
-    printf("Running gpu-miner version : %s\n", MINER_VERSION);
+    LOG("Running gpu-miner version : %s\n", MINER_VERSION);
 
     int gpu_count = 0;
     cudaGetDeviceCount(&gpu_count);
-    printf("GPU count: %d\n", gpu_count);
+    LOG("GPU count: %d\n", gpu_count);
     for (int i = 0; i < gpu_count; i++)
     {
-        printf("GPU #%d has #%d cores\n", i, get_device_cores(i));
+        LOG("GPU #%d has #%d cores\n", i, get_device_cores(i));
         use_device[i] = true;
     }
 
@@ -396,18 +395,22 @@ int main(int argc, char **argv)
             {
                 int device = atoi(argv[optind]);
                 if (device < 0 || device >= gpu_count) {
-                    printf("Invalid gpu index %d\n", device);
+                    LOGERR("Invalid gpu index %d\n", device);
                     exit(1);
                 }
                 use_device[device] = true;
             }
             break;
         default:
-            printf("Invalid command %c\n", command);
+            LOGERR("Invalid command %c\n", command);
             exit(1);
         }
     }
-    printf("will connect to broker @%s:%d\n", broker_ip, port);
+    LOG("will connect to broker @%s:%d\n", broker_ip, port);
+
+    #ifdef __linux__
+    signal(SIGPIPE, SIG_IGN);
+    #endif
 
     mining_workers_init(gpu_count);
     setup_gpu_worker_count(gpu_count, gpu_count * parallel_mining_works_per_gpu);

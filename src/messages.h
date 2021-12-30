@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "log.h"
+
 typedef struct blob_t {
     uint8_t *blob;
     ssize_t len;
@@ -40,7 +42,7 @@ char *bytes_to_hex(uint8_t *bytes, ssize_t len)
 void print_hex(const char* prefix, uint8_t *data, ssize_t nread)
 {
     char *hex_string = bytes_to_hex(data, nread);
-    printf("%s: %s\n", prefix, hex_string);
+    LOG("%s: %s\n", prefix, hex_string);
     free(hex_string);
 }
 
@@ -180,7 +182,7 @@ bool extract_bool(uint8_t **bytes)
     case 1:
         return true;
     default:
-        fprintf(stderr, "Invaid bool value");
+        LOGERR("Invaid bool value\n");
         exit(1);
     }
 }
@@ -204,15 +206,15 @@ void extract_blob(uint8_t **bytes, blob_t *blob)
     memcpy(blob->blob, *bytes, size);
     *bytes = *bytes + size;
 
-    // printf("blob: %ld\n", blob->len);
-    // printf("%s\n", bytes_to_hex(blob->blob, blob->len));
+    // LOG("blob: %ld\n", blob->len);
+    // LOG("%s\n", bytes_to_hex(blob->blob, blob->len));
 }
 
 void extract_job(uint8_t **bytes, job_t *job)
 {
     job->from_group = extract_size(bytes);
     job->to_group = extract_size(bytes);
-    // printf("group: %d, %d\n", job->from_group, job->to_group);
+    // LOG("group: %d, %d\n", job->from_group, job->to_group);
     extract_blob(bytes, &job->header_blob);
     extract_blob(bytes, &job->txs_blob);
     extract_blob(bytes, &job->target);
@@ -222,7 +224,7 @@ void extract_jobs(uint8_t **bytes, jobs_t *jobs)
 {
     ssize_t jobs_size = extract_size(bytes);
 
-    // printf("jobs: %ld\n", jobs_size);
+    // LOG("jobs: %ld\n", jobs_size);
 
     jobs->len = jobs_size;
     jobs->jobs = (job_t **)malloc(jobs_size * sizeof(job_t*));
@@ -265,7 +267,7 @@ server_message_t *decode_server_message(blob_t *blob)
         server_message->jobs = (jobs_t *)malloc(sizeof(jobs_t));
         extract_jobs(&pos, server_message->jobs);
 
-        // printf("%p, %p, %p\n", bytes, pos, bytes + len);
+        // LOG("%p, %p, %p\n", bytes, pos, bytes + len);
         break;
 
     case 1:
@@ -275,7 +277,7 @@ server_message_t *decode_server_message(blob_t *blob)
         break;
 
     default:
-        fprintf(stderr, "Invalid server message kind");
+        LOGERR("Invalid server message kind\n");
         exit(1);
     }
 
