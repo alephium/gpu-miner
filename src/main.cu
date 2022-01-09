@@ -360,7 +360,9 @@ int main(int argc, char **argv)
     LOG("GPU count: %d\n", gpu_count);
     for (int i = 0; i < gpu_count; i++)
     {
-        LOG("GPU #%d has #%d cores\n", i, get_device_cores(i));
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, i);
+        LOG("GPU #%d - %s has #%d cores\n", i, prop.name, get_device_cores(i));
         use_device[i] = true;
     }
 
