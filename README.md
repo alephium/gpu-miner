@@ -18,7 +18,7 @@ Please make sure that you have installed Nvidia driver for you GPU. You could ve
   gpu-miner/run-miner.sh
   ```
 
-You could specify the miner api with `-a broker` parameters, GPU indexes with `-g 1 2`.
+You could specify the miner api with `-a broker_ip` and `-p broker_port` parameters, GPU indexes with `-g 1 2`.
 
 ### Windows miner from source code
 
