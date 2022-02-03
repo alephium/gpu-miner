@@ -8,8 +8,8 @@ then
     exit 1
 fi
 
-echo "Installing build-essential, python3-pip and nvidia-cuda-toolkit"
-sudo apt install -y build-essential nvidia-cuda-toolkit cmake
+echo "Installing build-essential+git, python3-pip and nvidia-cuda-toolkit"
+sudo apt install -y build-essential nvidia-cuda-toolkit cmake git
 
 echo "Installing conan"
 temp_file=$(mktemp --suffix=.deb)
