@@ -183,7 +183,7 @@ ssize_t write_new_block(mining_worker_t *worker, uint8_t *write_buf) {
                                              : worker->host_hasher.ref_hasher->buf;
     uint8_t *write_pos = write_buf;
 
-    ssize_t block_size = 24 + job->header_blob.len + job->txs_blob.len;
+    ssize_t block_size = 24 + job->header_blob.len + job->body_blob.len;
     ssize_t message_size = 1 + 4 + block_size;
 
     write_size(&write_pos, message_size);
@@ -191,7 +191,7 @@ ssize_t write_new_block(mining_worker_t *worker, uint8_t *write_buf) {
     write_size(&write_pos, block_size);
     write_bytes(&write_pos, nonce, 24);
     write_blob(&write_pos, &job->header_blob);
-    write_blob(&write_pos, &job->txs_blob);
+    write_blob(&write_pos, &job->body_blob);
 
     return message_size + 4;
 }

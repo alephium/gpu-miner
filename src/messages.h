@@ -77,13 +77,13 @@ typedef struct job_t {
     int from_group;
     int to_group;
     blob_t header_blob;
-    blob_t txs_blob;
+    blob_t body_blob;
     blob_t target;
 } job_t;
 
 void free_job(job_t *job) {
     free_blob(&job->header_blob);
-    free_blob(&job->txs_blob);
+    free_blob(&job->body_blob);
     free_blob(&job->target);
     free(job);
 }
@@ -216,7 +216,7 @@ void extract_job(uint8_t **bytes, job_t *job)
     job->to_group = extract_size(bytes);
     // LOG("group: %d, %d\n", job->from_group, job->to_group);
     extract_blob(bytes, &job->header_blob);
-    extract_blob(bytes, &job->txs_blob);
+    extract_blob(bytes, &job->body_blob);
     extract_blob(bytes, &job->target);
 }
 
