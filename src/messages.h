@@ -252,24 +252,9 @@ void extract_submit_result(uint8_t **bytes, submit_result_t *result)
     result->status = extract_bool(bytes);
 }
 
-server_message_t *decode_server_message(blob_t *blob)
+server_message_t *decode_server_message(uint8_t *bytes, ssize_t len)
 {
-    uint8_t *bytes = blob->blob;
-    ssize_t len = blob->len;
-
-    if (len <= 4) {
-        return NULL; // not enough bytes for decoding
-    }
-
     uint8_t *pos = bytes;
-    ssize_t message_size = extract_size(&pos);
-    assert(pos == bytes + 4);
-
-    ssize_t message_byte_size = message_size + 4;
-    if (len < message_byte_size) {
-        return NULL; // not enough bytes for decoding
-    }
-
     uint8_t version = extract_byte(&pos);
     if (version != mining_protocol_version) {
         LOG("Invalid protocol version %d, expect %d\n", version, mining_protocol_version);
@@ -297,15 +282,6 @@ server_message_t *decode_server_message(blob_t *blob)
         LOGERR("Invalid server message kind\n");
         exit(1);
     }
-
-    assert(pos == (bytes + message_byte_size));
-    if (message_byte_size < len) {
-        blob->len = len - message_byte_size;
-        memmove(blob->blob, pos, blob->len);
-    } else {
-        blob->len = 0;
-    }
-
     return server_message;
 }
 
